@@ -320,5 +320,27 @@ const Matrix Matrix::convolution(const Matrix& m) const {
     return y;
 }
 
+const std::vector<double> Matrix::vectorize() const
+{
+    std::vector<double> v{};
+    for (int i = 0; i < getRows(); ++i) {
+        for (int j = 0; j < getCols(); ++j) {
+            v.push_back(at(i,j));
+        }
+    }
+    return v;
+}
+
+const std::vector<unsigned char> Matrix::vectorizeuc() const
+{
+    std::vector<unsigned char> v{};
+    for (int i = 0; i < getRows(); ++i) {
+        for (int j = 0; j < getCols(); ++j) {
+            v.push_back(static_cast<unsigned char>(at(i,j)));
+        }
+    }
+    return v;
+}
+
 } /* base */
 } /* capstone */

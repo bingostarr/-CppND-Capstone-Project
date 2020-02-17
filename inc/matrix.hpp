@@ -101,6 +101,8 @@ public:
     const Matrix product(Matrix& m) const;
     const Matrix zeroPadding(const int& b = 1) const;
     const Matrix convolution(const Matrix& m) const;
+    const std::vector<double> vectorize() const;
+    const std::vector<unsigned char> vectorizeuc() const;
 
 private:
     ImageSize_t m_size;

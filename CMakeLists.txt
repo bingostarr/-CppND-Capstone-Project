@@ -8,13 +8,19 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
 project(capstone_first)
 
+find_package(OpenCV 4.1 REQUIRED)
+
+include_directories(${OpenCV_INCLUDE_DIRS})
+link_directories(${OpenCV_LIBRARY_DIRS})
+add_definitions(${OpenCV_DEFINITIONS})
+
 # Set library output path to /lib
 set(LIBRARY_OUTPUT_PATH "${CMAKE_SOURCE_DIR}/lib")
 
 # Add project executable
-add_executable(capstone_first src/main.cpp src/matrix.cpp inc/queue.hpp src/dataset.cpp) #src/route_model.cpp src/route_planner.cpp)
+add_executable(capstone_first src/main.cpp src/matrix.cpp inc/imgproc.hpp src/dataset.cpp) #src/route_model.cpp src/route_planner.cpp)
 
-target_link_libraries(capstone_first PUBLIC pthread)
+target_link_libraries(capstone_first PUBLIC pthread ${OpenCV_LIBRARIES})
 target_include_directories(capstone_first PRIVATE inc)
 
 ###################################
