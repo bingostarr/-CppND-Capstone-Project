@@ -7,21 +7,22 @@
 
 #include "matrix.hpp"
 #include <cassert>
+#include <algorithm>
 
 namespace capstone {
 namespace base {
 
 Matrix::Matrix(const ImageSize_t& size,
-               const MTX_TYPE& mtype)
+               const MTXTYPE& mtype)
         : m_size(size),
-          m_matrix {std::make_unique<double[]>(m_size.npixels)} {
-    for (int i = 0; i < getRows(); ++i) {
-        for (int j = 0; j < getCols(); ++j) {
+          m_matrix {std::make_unique<double[]>(m_size.nPixels())} {
+    for (int i = 0; i < getSize(); ++i) {
+        for (int j = 0; j < getSize(); ++j) {
             switch (mtype) {
-            case MTX_TYPE::ONES:
+            case MTXTYPE::ONES:
                 at(i,j) = 1.0;
                 break;
-            case MTX_TYPE::ID:
+            case MTXTYPE::ID:
                 at(i,j) = (i == j) ? 1.0 : 0.0;
                 break;
             default:
@@ -34,11 +35,11 @@ Matrix::Matrix(const ImageSize_t& size,
 Matrix::Matrix(const ImageSize_t& size,
                const std::vector<double>& v)
         : m_size(size),
-          m_matrix {std::make_unique<double[]>(m_size.npixels)} {
-    assert(v.size() == m_size.npixels);
+          m_matrix {std::make_unique<double[]>(m_size.nPixels())} {
+    assert(v.size() == m_size.nPixels());
     int k = 0;
-    for (int i = 0; i < getRows(); ++i) {
-        for (int j = 0; j < getCols(); ++j) {
+    for (int i = 0; i < getSize(); ++i) {
+        for (int j = 0; j < getSize(); ++j) {
             at(i,j) = v[k];
             k++;
         }
@@ -47,9 +48,9 @@ Matrix::Matrix(const ImageSize_t& size,
 
 Matrix::Matrix(const Matrix& m)
         : m_size(m.getSize()),
-          m_matrix {std::make_unique<double[]>(m_size.npixels)} {
-    for (int i = 0; i < getRows(); ++i) {
-        for (int j = 0; j < getCols(); ++j) {
+          m_matrix {std::make_unique<double[]>(m_size.nPixels())} {
+    for (int i = 0; i < getSize(); ++i) {
+        for (int j = 0; j < getSize(); ++j) {
             at(i,j) = m(i, j);
         }
     }
@@ -57,10 +58,10 @@ Matrix::Matrix(const Matrix& m)
 
 Matrix::Matrix(Matrix&& m)
         : m_size(m.getSize()),
-          m_matrix {std::make_unique<double[]>(m_size.npixels)} {
+          m_matrix {std::make_unique<double[]>(m_size.nPixels())} {
     int k = 0;
-    for (int i = 0; i < getRows(); ++i) {
-        for (int j = 0; j < getCols(); ++j) {
+    for (int i = 0; i < getSize(); ++i) {
+        for (int j = 0; j < getSize(); ++j) {
             m_matrix[k] = m(i, j);
             k++;
         }
@@ -68,32 +69,32 @@ Matrix::Matrix(Matrix&& m)
 }
 
 const Matrix Matrix::operator=(const Matrix& m) const {
-    assert(m.getSize() == getSize());
-    Matrix x(m_size, MTX_TYPE::ZEROS);
-    for (int i = 0; i < getRows(); ++i) {
-        for (int j = 0; j < getCols(); ++j) {
-            x(i,j) = m(i,j);
-        }
-    }
+    Matrix x(m);
+//    Matrix x(m_size, MTXTYPE::ZEROS);
+//    for (int i = 0; i < getSize(); ++i) {
+//        for (int j = 0; j < getSize(); ++j) {
+//            x(i,j) = m(i,j);
+//        }
+//    }
     return x;
 }
 
 const Matrix Matrix::operator=(Matrix&& m) const {
-    assert(m.getSize() == getSize());
-    Matrix x(m_size, MTX_TYPE::ZEROS);
-    for (int i = 0; i < getRows(); ++i) {
-        for (int j = 0; j < getCols(); ++j) {
-            x(i,j) = m(i,j);
-        }
-    }
+    Matrix x(m);
+//    Matrix x(m_size, MTXTYPE::ZEROS);
+//    for (int i = 0; i < getSize(); ++i) {
+//        for (int j = 0; j < getSize(); ++j) {
+//            x(i,j) = m(i,j);
+//        }
+//    }
     return x;
 }
 
 const Matrix Matrix::operator+(const Matrix& m) const {
     assert(m.getSize() == getSize());
-    Matrix x(m_size, MTX_TYPE::ZEROS);
-    for (int i = 0; i < getRows(); ++i) {
-        for (int j = 0; j < getCols(); ++j) {
+    Matrix x(m_size, MTXTYPE::ZEROS);
+    for (int i = 0; i < getSize(); ++i) {
+        for (int j = 0; j < getSize(); ++j) {
             x(i,j) = at(i,j) + m(i,j);
         }
     }
@@ -102,9 +103,9 @@ const Matrix Matrix::operator+(const Matrix& m) const {
 
 const Matrix Matrix::operator+(Matrix&& m) const {
     assert(m.getSize() == getSize());
-    Matrix x(m_size, MTX_TYPE::ZEROS);
-    for (int i = 0; i < getRows(); ++i) {
-        for (int j = 0; j < getCols(); ++j) {
+    Matrix x(m_size, MTXTYPE::ZEROS);
+    for (int i = 0; i < getSize(); ++i) {
+        for (int j = 0; j < getSize(); ++j) {
             x(i,j) = at(i,j) + m(i,j);
         }
     }
@@ -113,9 +114,9 @@ const Matrix Matrix::operator+(Matrix&& m) const {
 
 const Matrix Matrix::operator-(const Matrix& m) const {
     assert(m.getSize() == getSize());
-    Matrix x(m_size, MTX_TYPE::ZEROS);
-    for (int i = 0; i < getRows(); ++i) {
-        for (int j = 0; j < getCols(); ++j) {
+    Matrix x(m_size, MTXTYPE::ZEROS);
+    for (int i = 0; i < getSize(); ++i) {
+        for (int j = 0; j < getSize(); ++j) {
             x(i,j) = at(i,j) - m(i,j);
         }
     }
@@ -124,9 +125,9 @@ const Matrix Matrix::operator-(const Matrix& m) const {
 
 const Matrix Matrix::operator-(Matrix&& m) const {
     assert(m.getSize() == getSize());
-    Matrix x(m_size, MTX_TYPE::ZEROS);
-    for (int i = 0; i < getRows(); ++i) {
-        for (int j = 0; j < getCols(); ++j) {
+    Matrix x(m_size, MTXTYPE::ZEROS);
+    for (int i = 0; i < getSize(); ++i) {
+        for (int j = 0; j < getSize(); ++j) {
             x(i,j) = at(i,j) - m(i,j);
         }
     }
@@ -135,12 +136,10 @@ const Matrix Matrix::operator-(Matrix&& m) const {
 
 const Matrix Matrix::operator*(const Matrix& m) const {
     assert(m.getSize() == getSize());
-    Matrix x(m_size, MTX_TYPE::ZEROS);
-    int k = 0;
-    for (int i = 0; i < getRows(); ++i) {
-        for (int j = 0; j < getCols(); ++j) {
+    Matrix x(m_size, MTXTYPE::ZEROS);
+    for (int i = 0; i < getSize(); ++i) {
+        for (int j = 0; j < getSize(); ++j) {
             x(i,j) = at(i,j) * m(i,j);
-            k++;
         }
     }
     return x;
@@ -148,24 +147,10 @@ const Matrix Matrix::operator*(const Matrix& m) const {
 
 const Matrix Matrix::operator*(Matrix&& m) const {
     assert(m.getSize() == getSize());
-    Matrix x(m_size, MTX_TYPE::ZEROS);
-    int k = 0;
-    for (int i = 0; i < getRows(); ++i) {
-        for (int j = 0; j < getCols(); ++j) {
+    Matrix x(m_size, MTXTYPE::ZEROS);
+    for (int i = 0; i < getSize(); ++i) {
+        for (int j = 0; j < getSize(); ++j) {
             x(i,j) = at(i,j) * m(i,j);
-            k++;
-        }
-    }
-    return x;
-}
-
-const Matrix Matrix::operator*(const double& d) const {
-    Matrix x(m_size, MTX_TYPE::ZEROS);
-    int k = 0;
-    for (int i = 0; i < getRows(); ++i) {
-        for (int j = 0; j < getCols(); ++j) {
-            x(i,j) = d * at(i,j);
-            k++;
         }
     }
     return x;
@@ -173,12 +158,10 @@ const Matrix Matrix::operator*(const double& d) const {
 
 const Matrix Matrix::operator/(const Matrix& m) const {
     assert(m.getSize() == getSize());
-    Matrix x(m_size, MTX_TYPE::ZEROS);
-    int k = 0;
-    for (int i = 0; i < getRows(); ++i) {
-        for (int j = 0; j < getCols(); ++j) {
+    Matrix x(m_size, MTXTYPE::ZEROS);
+    for (int i = 0; i < getSize(); ++i) {
+        for (int j = 0; j < getSize(); ++j) {
             x(i,j) = at(i,j) / m(i,j);
-            k++;
         }
     }
     return x;
@@ -186,10 +169,50 @@ const Matrix Matrix::operator/(const Matrix& m) const {
 
 const Matrix Matrix::operator/(Matrix&& m) const {
     assert(m.getSize() == getSize());
-    Matrix x(m_size, MTX_TYPE::ZEROS);
-    for (int i = 0; i < getRows(); ++i) {
-        for (int j = 0; j < getCols(); ++j) {
+    Matrix x(m_size, MTXTYPE::ZEROS);
+    for (int i = 0; i < getSize(); ++i) {
+        for (int j = 0; j < getSize(); ++j) {
             x(i,j) = at(i,j) / m(i,j);
+        }
+    }
+    return x;
+}
+
+const Matrix Matrix::operator+(const double& d) const {
+    Matrix x(m_size, MTXTYPE::ZEROS);
+    for (int i = 0; i < getSize(); ++i) {
+        for (int j = 0; j < getSize(); ++j) {
+            x(i,j) = at(i,j) + d;
+        }
+    }
+    return x;
+}
+
+const Matrix Matrix::operator-(const double& d) const {
+    Matrix x(m_size, MTXTYPE::ZEROS);
+    for (int i = 0; i < getSize(); ++i) {
+        for (int j = 0; j < getSize(); ++j) {
+            x(i,j) = at(i,j) - d;
+        }
+    }
+    return x;
+}
+
+const Matrix Matrix::operator*(const double& d) const {
+    Matrix x(m_size, MTXTYPE::ZEROS);
+    for (int i = 0; i < getSize(); ++i) {
+        for (int j = 0; j < getSize(); ++j) {
+            x(i,j) = at(i,j) * d;
+        }
+    }
+    return x;
+}
+
+const Matrix Matrix::operator/(const double& d) const {
+    Matrix x(m_size, MTXTYPE::ZEROS);
+    for (int i = 0; i < getSize(); ++i) {
+        for (int j = 0; j < getSize(); ++j) {
+            x(i,j) = at(i,j) / d;
         }
     }
     return x;
@@ -198,40 +221,40 @@ const Matrix Matrix::operator/(Matrix&& m) const {
 double& Matrix::operator()(const int& i,
                            const int& j) {
     assert(m_size.inRange(i, j));
-    return m_matrix[(i * getCols()) + j];
+    return m_matrix[(i * getSize()) + j];
 }
 
 const double& Matrix::operator()(const int& i,
                                  const int& j) const {
     assert(m_size.inRange(i, j));
-    return m_matrix[(i * getCols()) + j];
+    return m_matrix[(i * getSize()) + j];
 }
 
 double& Matrix::at(const int& i,
                    const int& j) {
     assert(m_size.inRange(i, j));
-    return m_matrix[(i * getCols()) + j];
+    return m_matrix[(i * getSize()) + j];
 }
 
 const double& Matrix::at(const int& i,
                          const int& j) const {
     assert(m_size.inRange(i, j));
-    return m_matrix[(i * getCols()) + j];
+    return m_matrix[(i * getSize()) + j];
 }
 
 std::string Matrix::show() {
     std::string x = "{\n";
     int k = 0;
-    for (int i = 0; i < getRows(); ++i) {
+    for (int i = 0; i < getSize(); ++i) {
         x += "\t";
-        for (int j = 0; j < getCols(); ++j) {
+        for (int j = 0; j < getSize(); ++j) {
             std::string s = std::to_string(m_matrix[k]);
             x += s + "\t";
             k++;
         }
         x += "\n";
     }
-    x += "}--"+ std::to_string(getRows()) + "X" + std::to_string(getCols());
+    x += "}--"+ std::to_string(getSize()) + "X" + std::to_string(getSize());
     return x;
 }
 
@@ -241,11 +264,11 @@ const Matrix Matrix::subMatrix(const int& a,
 {
     assert(m_size.inRange(a, b));
     assert(size < m_size);
-    assert((a + m_size.nrows) <= getRows());
-    assert((b + m_size.ncols) <= getCols());
-    Matrix x(size, MTX_TYPE::ZEROS);
-    for (int i = 0; i < size.nrows; ++i) {
-        for (int j = 0; j < size.ncols; ++j) {
+    assert((a + m_size.getSize()) <= getSize());
+    assert((b + m_size.getSize()) <= getSize());
+    Matrix x(size, MTXTYPE::ZEROS);
+    for (int i = 0; i < size.getSize(); ++i) {
+        for (int j = 0; j < size.getSize(); ++j) {
             x(i,j) = at(a + i, b + j);
         }
     }
@@ -254,17 +277,41 @@ const Matrix Matrix::subMatrix(const int& a,
 
 const double Matrix::sum() const {
     double c = 0;
-    for (int i = 0; i < getRows() * getCols(); ++i) {
+    for (int i = 0; i < getSize() * getSize(); ++i) {
         c += m_matrix[i];
     }
     return c;
 }
 
+const Coords_t Matrix::getIndexMax() const {
+    std::vector<double> v = vectorize();
+    int i = std::max_element(v.begin(), v.end()) - v.begin();
+    Coords_t c(i / getSize(), i % getSize());
+    return c;
+}
+
+const double& Matrix::max() const {
+    Coords_t c = getIndexMax();
+    return at(c.i, c.j);
+}
+
+const Coords_t Matrix::getIndexMin() const {
+    std::vector<double> v = vectorize();
+    int i = std::min_element(v.begin(), v.end()) - v.begin();
+    Coords_t c(i / getSize(), i % getSize());
+    return c;
+}
+
+const double& Matrix::min() const {
+    Coords_t c = getIndexMin();
+    return at(c.i, c.j);
+}
+
 const Matrix Matrix::transpose() const {
-    Matrix x(m_size.transpose(), MTX_TYPE::ZEROS);
+    Matrix x(m_size, MTXTYPE::ZEROS);
     int k = 0;
-    for (int i = 0; i < getRows(); ++i) {
-        for (int j = 0; j < getCols(); ++j) {
+    for (int i = 0; i < getSize(); ++i) {
+        for (int j = 0; j < getSize(); ++j) {
             x(j,i) = m_matrix[k];
             k++;
         }
@@ -273,14 +320,12 @@ const Matrix Matrix::transpose() const {
 }
 
 const Matrix Matrix::product(Matrix& m) const {
-    assert(m.getRows() == getCols());
-    Matrix x(ImageSize_t(getRows(),
-                         m.getCols()),
-             MTX_TYPE::ZEROS);
-    for (int i = 0; i < x.getRows(); ++i) {
-        for (int j = 0; j < x.getCols(); ++j) {
+    assert(m.getSize() == getSize());
+    Matrix x(getSize(), MTXTYPE::ZEROS);
+    for (int i = 0; i < x.getSize(); ++i) {
+        for (int j = 0; j < x.getSize(); ++j) {
             double c = 0;
-            for (int k = 0; k < getCols(); ++k) {
+            for (int k = 0; k < getSize(); ++k) {
                 c += at(i,k) * m(k, j);
             }
             x(i,j) = c;
@@ -289,54 +334,12 @@ const Matrix Matrix::product(Matrix& m) const {
     return x;
 }
 
-const Matrix Matrix::zeroPadding(const int& b) const {
-    assert(b >= 0);
-    Matrix x(ImageSize_t(getRows() + (2 * b),
-                         getCols() + (2 * b)),
-                         MTX_TYPE::ZEROS);
-    for (int i = b; i < (getRows() + b); ++i) {
-        for (int j = b; j < (getCols() + b); ++j) {
-            x(i, j) = at(i - b, j - b);
-        }
-    }
-    return x;
-}
-
-const Matrix Matrix::convolution(const Matrix& m) const {
-    assert(isSquare());
-    assert(m.isSquare());
-    assert(m.getSize() < getSize());
-    assert((m.getCols() % 2) != 0);
-    Matrix y(ImageSize_t(getRows() - m.getRows() + 3,
-                         getCols() - m.getCols() + 3),
-             MTX_TYPE::ZEROS);
-    Matrix x = zeroPadding(m.getRows() - 2);
-    for (int i = 0; i < y.getRows(); ++i) {
-        for (int j = 0; j < y.getCols(); ++j) {
-            Matrix z = m * x.subMatrix(i, j, m.getSize());
-            y(i,j) = z.sum();
-        }
-    }
-    return y;
-}
-
 const std::vector<double> Matrix::vectorize() const
 {
     std::vector<double> v{};
-    for (int i = 0; i < getRows(); ++i) {
-        for (int j = 0; j < getCols(); ++j) {
+    for (int i = 0; i < getSize(); ++i) {
+        for (int j = 0; j < getSize(); ++j) {
             v.push_back(at(i,j));
-        }
-    }
-    return v;
-}
-
-const std::vector<unsigned char> Matrix::vectorizeuc() const
-{
-    std::vector<unsigned char> v{};
-    for (int i = 0; i < getRows(); ++i) {
-        for (int j = 0; j < getCols(); ++j) {
-            v.push_back(static_cast<unsigned char>(at(i,j)));
         }
     }
     return v;

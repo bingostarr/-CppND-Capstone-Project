@@ -14,11 +14,14 @@
 namespace capstone {
 namespace base {
 
-Dataset::Dataset(const std::string& filename)
+Dataset::Dataset(const std::string& filename,
+                 const DATATYPE& dataType)
         : m_synch{},
           m_filename(filename),
           m_magicNumber(0),
-          m_nImages(0) {
+          m_nImages(0),
+          m_dataType(dataType),
+          m_dataTypeStr((dataType == DATATYPE::TEST)? "test": "train") {
 }
 
 void Dataset::wait() {
@@ -27,14 +30,17 @@ void Dataset::wait() {
 
 std::string Dataset::show() {
     std::string x = "{\n";
+    x += "\tfilename: " + m_filename+ "\n";
+    x += "\ttype: " + m_dataTypeStr + "\n";
     x += "\tmagic number: " + std::to_string(m_magicNumber)+ "\n";
     x += "\timages: " + std::to_string(m_nImages)+ "\n";
     x += "}";
     return x;
 }
 
-DatasetImage::DatasetImage(const std::string& filename)
-        : Dataset(filename) {
+DatasetImage::DatasetImage(const std::string& filename,
+                           const DATATYPE& dataType)
+        : Dataset(filename, dataType) {
     std::thread a(&DatasetImage::init, this);
     a.join();
 }
@@ -68,10 +74,16 @@ void DatasetImage::init() {
             ncols = (ncols << 8) | k;
         }
         else {
-            ImageSize_t imgSize(nrows, ncols);
+            assert(nrows == ncols); // square matrices only.
+            assert((nrows % 2) == 0); // even number of rows and cols
             data.push_back(static_cast<double>(k));
             pixelCount++;
             if (pixelCount == (nrows * ncols)) {
+                ImageSize_t imgSize(INPUTSIZE);
+                if (nrows < INPUTSIZE) {
+                    uint32_t p = (INPUTSIZE - nrows) / 2;
+                    pad(nrows, p, data);
+                }
                 Matrix m(imgSize, data);
                 m_data.push_back(m);
                 data.clear();
@@ -90,8 +102,33 @@ std::string DatasetImage::showIndex(const int& index) {
     return (m_data[index].show());
 }
 
-DatasetLabel::DatasetLabel(const std::string& filename)
-        : Dataset(filename) {
+void DatasetImage::pad(const uint32_t& nrows,
+                       const uint32_t& p,
+                       std::vector<double>& data) {
+    assert(p >= 0);
+    if (p == 0) {
+        return;
+    }
+    int count1 = 0;
+    std::vector<double> tdata;
+    for (int i = 0; i < (nrows + 2 * p); ++i) {
+        for (int j = 0; j < (nrows + 2 * p); ++j) {
+            if ((i >= p) && (j >= p) && (i < (nrows + p)) && (j < (nrows + p))) {
+                tdata.push_back(data[count1]);
+                count1++;
+            }
+            else {
+                tdata.push_back(0);
+            }
+        }
+    }
+    data = std::move(tdata);
+}
+
+
+DatasetLabel::DatasetLabel(const std::string& filename,
+                           const DATATYPE& dataType)
+        : Dataset(filename, dataType) {
     std::thread a(&DatasetLabel::init, this);
     a.join();
 }
@@ -104,7 +141,6 @@ void DatasetLabel::init() {
     m_data.clear();
     m_magicNumber = 0;
     m_nImages = 0;
-    std::vector<double> data{};
     char c;
     int count = 0;
     while (input.get(c)) {

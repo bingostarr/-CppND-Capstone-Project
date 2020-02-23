@@ -15,12 +15,14 @@
 namespace capstone {
 namespace base {
 
-inline void show(const uint32_t r,
-                 const uint32_t c,
-                 const std::vector<unsigned char> v,
+inline void show(const Matrix& m,
                  const std::string l) {
 
-    cv::Mat image(r, c, CV_8UC1, (void*)(&v[0]));
+    std::vector<unsigned char> v{};
+    for (auto d : m.vectorize()) {
+        v.push_back(d);
+    }
+    cv::Mat image(m.getSize(), m.getSize(), CV_8UC1, (void*)(&v[0]));
 
     if(!image.data)                              // Check for invalid input
     {
