@@ -11,6 +11,7 @@
 #include <vector>
 #include "defines.hpp"
 #include "matrix3d.hpp"
+#include "matrix.hpp"
 
 namespace capstone {
 namespace base {
@@ -19,7 +20,7 @@ class Layer {
 public:
     explicit Layer(const LayerAttr_t& attr)
             : m_attr(attr),
-              m_gradient(Matrix3d(m_attr.featureSize)),
+              m_gradient(Matrix3d(m_attr.inputSize)),
               m_cachedInput(Matrix3d(m_attr.inputSize)),
               m_cachedOutput(Matrix3d(m_attr.outputSize)) {
     }
@@ -39,6 +40,13 @@ public:
     virtual void forward(Matrix3d& input,
                          Matrix3d& output) = 0;
     virtual void backward(Matrix3d& gradient) = 0;
+    virtual void update(const double& diffLearningRate) {
+        //
+    }
+    virtual void reset() {
+        //
+    }
+    virtual std::string show() = 0;
 protected:
     LayerAttr_t m_attr;
     Matrix3d m_gradient;
@@ -46,39 +54,32 @@ protected:
     Matrix3d m_cachedOutput;
 };
 
-#if 0
 class LayerConv final : public Layer {
 public:
-    explicit LayerConv();
+    explicit LayerConv(const LayerAttr_t& attr);
     virtual ~LayerConv() final = default;
-    inline Matrix3d& getWeights() {
-        return m_weights;
-    }
     void forward(Matrix3d& input,
                  Matrix3d& output) final;
     void backward(Matrix3d& gradient) final;
+    void update(const double& diffLearningRate) final;
+    void reset() final;
+    std::string show() final;
 private:
-    const Matrix convolution(const Matrix& m) const;
-    Matrix3d m_weights;
+    Matrix3d m_gradientCumul;
+    std::vector<Matrix3d> m_weights;
+    std::vector<Matrix3d> m_weightsCumul;
 };
-#endif
 
 class LayerPool final : public Layer {
 public:
-    explicit LayerPool(const LayerAttr_t& attr,
-                       const POOLTYPE& poolType = POOLTYPE::AVG)
-            : Layer(attr),
-              m_poolType(poolType) {
+    explicit LayerPool(const LayerAttr_t& attr)
+            : Layer(attr) {
     }
     virtual ~LayerPool() final = default;
-    inline const POOLTYPE& getPoolType() const {
-        return m_poolType;
-    }
     void forward(Matrix3d& input,
                  Matrix3d& output) final;
     void backward(Matrix3d& gradient) final;
-private:
-    POOLTYPE m_poolType;
+    std::string show() final;
 };
 
 class LayerRelu final : public Layer {
@@ -90,6 +91,25 @@ public:
     void forward(Matrix3d& input,
                  Matrix3d& output) final;
     void backward(Matrix3d& gradient) final;
+    std::string show() final;
+};
+
+class LayerFull final : public Layer {
+public:
+    explicit LayerFull(const LayerAttr_t& attr);
+    virtual ~LayerFull() final = default;
+    void forward(Matrix3d& input,
+                 Matrix3d& output) final;
+    void backward(Matrix3d& gradient) final;
+    void update(const double& diffLearningRate) final;
+    void reset() final;
+    std::string show() final;
+private:
+    Matrix3d m_gradientCumul;
+    Matrix3d m_biases;
+    Matrix3d m_biasesCumul;
+    std::vector<Matrix3d> m_weights;
+    std::vector<Matrix3d> m_weightsCumul;
 };
 
 class LayerSmax final : public Layer {
@@ -101,6 +121,7 @@ public:
     void forward(Matrix3d& input,
                  Matrix3d& output) final;
     void backward(Matrix3d& gradient) final;
+    std::string show() final;
 };
 
 class LayerLoss final : public Layer {
@@ -116,6 +137,7 @@ public:
     void forward(Matrix3d& input,
                  Matrix3d& output) final;
     void backward(Matrix3d& gradient) final;
+    std::string show() final;
 private:
     double m_loss;
 };

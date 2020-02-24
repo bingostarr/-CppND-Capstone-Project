@@ -67,6 +67,7 @@ private:
     void pad(const uint32_t& nrows,
              const uint32_t& p,
              std::vector<double>& data);
+    void normalize(std::vector<double>& data);
 };
 
 class DatasetLabel final : public Dataset {

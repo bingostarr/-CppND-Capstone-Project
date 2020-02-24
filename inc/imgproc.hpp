@@ -20,7 +20,7 @@ inline void show(const Matrix& m,
 
     std::vector<unsigned char> v{};
     for (auto d : m.vectorize()) {
-        v.push_back(d);
+        v.push_back(SCALE * d);
     }
     cv::Mat image(m.getSize(), m.getSize(), CV_8UC1, (void*)(&v[0]));
 

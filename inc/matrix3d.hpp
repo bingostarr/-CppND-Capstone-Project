@@ -17,7 +17,8 @@ namespace base {
 
 class Matrix3d {
 public:
-    Matrix3d(const CubeSize_t& size);
+    Matrix3d(const CubeSize_t& size,
+             const MTXTYPE& mtxType = MTXTYPE::ZEROS);
     Matrix3d(const Matrix3d& m);
     Matrix3d(Matrix3d&& m);
     ~Matrix3d() = default;
@@ -43,19 +44,37 @@ public:
                              const int& j) const;
     Matrix& at(const int& k);
     const Matrix& at(const int& k) const;
+    double& at(const int& k,
+               const int& i,
+               const int& j);
+    const double& at(const int& k,
+                     const int& i,
+                     const int& j) const;
 
-    inline const CubeSize_t getSize() const {
+    inline const CubeSize_t& getCubeSize() const {
         return m_size;
     }
-    inline const ImageSize_t getImageSize() const {
+    inline const ImageSize_t& getImageSize() const {
         return m_size.getImageSize();
     }
-    inline const uint32_t getNLayers() const {
+    inline const uint32_t& getNLayers() const {
         return m_size.getNLayers();
     }
+    inline const uint32_t& getSize() const {
+        return m_size.getSize();
+    }
     std::string show();
+    const double sum() const;
+    const Matrix3d subMatrix3d(const int& c,
+                               const int& a,
+                               const int& b,
+                               const CubeSize_t& size) const;
+    void fillSubMatrix3d(const int& c,
+                         const int& a,
+                         const int& b,
+                         const Matrix3d& m);
     const std::vector<double> vectorize() const;
-
+    void zero();
 private:
     CubeSize_t m_size;
     std::vector<Matrix> m_matrix3d;

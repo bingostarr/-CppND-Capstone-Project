@@ -18,7 +18,7 @@ add_definitions(${OpenCV_DEFINITIONS})
 set(LIBRARY_OUTPUT_PATH "${CMAKE_SOURCE_DIR}/lib")
 
 # Add project executable
-add_executable(capstone_first src/main.cpp src/matrix.cpp src/matrix3d.cpp inc/imgproc.hpp src/dataset.cpp src/layer.cpp)# src/route_planner.cpp)
+add_executable(capstone_first src/main.cpp src/matrix.cpp src/matrix3d.cpp src/dataset.cpp src/layer.cpp src/cnn.cpp)
 
 target_link_libraries(capstone_first PUBLIC pthread ${OpenCV_LIBRARIES})
 target_include_directories(capstone_first PRIVATE inc)

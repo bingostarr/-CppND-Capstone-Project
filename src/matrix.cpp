@@ -7,7 +7,9 @@
 
 #include "matrix.hpp"
 #include <cassert>
+#include <cmath>
 #include <algorithm>
+#include <random>
 
 namespace capstone {
 namespace base {
@@ -16,6 +18,8 @@ Matrix::Matrix(const ImageSize_t& size,
                const MTXTYPE& mtype)
         : m_size(size),
           m_matrix {std::make_unique<double[]>(m_size.nPixels())} {
+    std::default_random_engine generator;
+    std::normal_distribution<double> distribution(0, 1);
     for (int i = 0; i < getSize(); ++i) {
         for (int j = 0; j < getSize(); ++j) {
             switch (mtype) {
@@ -25,6 +29,15 @@ Matrix::Matrix(const ImageSize_t& size,
             case MTXTYPE::ID:
                 at(i,j) = (i == j) ? 1.0 : 0.0;
                 break;
+            case MTXTYPE::RANDN:
+            {
+                double x = 3;
+                while (std::abs(x) > 2.0) {
+                    x = distribution(generator);
+                }
+                at(i,j) = x;
+                break;
+            }
             default:
                 at(i,j) = 0.0;
             }
@@ -37,12 +50,8 @@ Matrix::Matrix(const ImageSize_t& size,
         : m_size(size),
           m_matrix {std::make_unique<double[]>(m_size.nPixels())} {
     assert(v.size() == m_size.nPixels());
-    int k = 0;
-    for (int i = 0; i < getSize(); ++i) {
-        for (int j = 0; j < getSize(); ++j) {
-            at(i,j) = v[k];
-            k++;
-        }
+    for (int k = 0; k < m_size.nPixels(); ++k) {
+        m_matrix[k] = v[k];
     }
 }
 
@@ -264,8 +273,8 @@ const Matrix Matrix::subMatrix(const int& a,
 {
     assert(m_size.inRange(a, b));
     assert(size < m_size);
-    assert((a + m_size.getSize()) <= getSize());
-    assert((b + m_size.getSize()) <= getSize());
+    assert((a + size.getSize()) <= getSize());
+    assert((b + size.getSize()) <= getSize());
     Matrix x(size, MTXTYPE::ZEROS);
     for (int i = 0; i < size.getSize(); ++i) {
         for (int j = 0; j < size.getSize(); ++j) {
@@ -337,12 +346,16 @@ const Matrix Matrix::product(Matrix& m) const {
 const std::vector<double> Matrix::vectorize() const
 {
     std::vector<double> v{};
-    for (int i = 0; i < getSize(); ++i) {
-        for (int j = 0; j < getSize(); ++j) {
-            v.push_back(at(i,j));
-        }
+    for (int k = 0; k < m_size.nPixels(); ++k) {
+        v.push_back(m_matrix[k]);
     }
     return v;
+}
+
+void Matrix::zero() {
+    for (int k = 0; k < m_size.nPixels(); ++k) {
+        m_matrix[k] = 0;
+    }
 }
 
 } /* base */

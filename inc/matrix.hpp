@@ -58,12 +58,13 @@ public:
     const double& max() const;
     const Coords_t getIndexMin() const;
     const double& min() const;
-    const Matrix subMatrix(const int& i,
-                           const int& j,
+    const Matrix subMatrix(const int& a,
+                           const int& b,
                            const ImageSize_t& size) const;
     const Matrix transpose() const;
     const Matrix product(Matrix& m) const;
     const std::vector<double> vectorize() const;
+    void zero();
 
 private:
     ImageSize_t m_size;

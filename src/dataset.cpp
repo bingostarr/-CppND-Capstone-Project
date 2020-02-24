@@ -10,6 +10,7 @@
 #include <cassert>
 #include <fstream>
 #include <thread>
+#include <cmath>
 
 namespace capstone {
 namespace base {
@@ -76,9 +77,12 @@ void DatasetImage::init() {
         else {
             assert(nrows == ncols); // square matrices only.
             assert((nrows % 2) == 0); // even number of rows and cols
-            data.push_back(static_cast<double>(k));
+            data.push_back((static_cast<double>(k)) / SCALE);
             pixelCount++;
             if (pixelCount == (nrows * ncols)) {
+                if (DATATYPE::TRAIN == m_dataType) {
+                    normalize(data);
+                }
                 ImageSize_t imgSize(INPUTSIZE);
                 if (nrows < INPUTSIZE) {
                     uint32_t p = (INPUTSIZE - nrows) / 2;
@@ -125,6 +129,19 @@ void DatasetImage::pad(const uint32_t& nrows,
     data = std::move(tdata);
 }
 
+void DatasetImage::normalize(std::vector<double>& data) {
+    double norm = 0;
+    for (double d : data) {
+        norm += d * d;
+    }
+    norm = sqrt(norm);
+    if (norm == 0) {
+        return;
+    }
+    for (int i = 0; i < data.size(); ++i) {
+        data[i] /= norm;
+    }
+}
 
 DatasetLabel::DatasetLabel(const std::string& filename,
                            const DATATYPE& dataType)
