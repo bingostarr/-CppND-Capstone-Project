@@ -10,9 +10,9 @@
 
 #include <vector>
 #include <memory>
-#include "defines.hpp"
 #include "dataset.hpp"
 #include "layer.hpp"
+#include "matrix3d.hpp"
 
 namespace capstone {
 namespace base {
@@ -21,13 +21,14 @@ class Cnn {
 public:
     explicit Cnn();
     ~Cnn() = default;
-    void train(const DatasetImage& images,
-               const DatasetLabel& labels);
-    void test(const DatasetImage& images,
-              const DatasetLabel& labels);
+    void train(DatasetImage& images,
+               DatasetLabel& labels);
+    void test(DatasetImage& images,
+              DatasetLabel& labels);
     std::string show();
 private:
     std::vector<std::shared_ptr<Layer>> m_layers;
+    std::vector<Matrix3d> m_outputs;
 };
 
 } /* base */

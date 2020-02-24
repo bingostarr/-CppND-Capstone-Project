@@ -89,7 +89,10 @@ void DatasetImage::init() {
                     pad(nrows, p, data);
                 }
                 Matrix m(imgSize, data);
-                m_data.push_back(m);
+                CubeSize_t cb(1, imgSize.getSize());
+                Matrix3d m1(cb);
+                m1.at(0) = m;
+                m_data.push_back(m1);
                 data.clear();
                 pixelCount = 0;
             }

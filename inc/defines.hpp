@@ -17,6 +17,7 @@
 namespace capstone {
 namespace base {
 
+static const uint32_t EPOCHS = 10;
 static const uint32_t CNNLAYERS = 9;
 static const uint32_t BATCHSIZE = 10;
 static const uint32_t INPUTSIZE = 28;

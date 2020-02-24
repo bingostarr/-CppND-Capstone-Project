@@ -28,6 +28,9 @@ public:
     inline const LayerAttr_t& getAttr() const {
         return m_attr;
     }
+    inline const LAYERTYPE& getType() const {
+        return m_attr.type;
+    }
     inline Matrix3d& getGradient() {
         return m_gradient;
     }

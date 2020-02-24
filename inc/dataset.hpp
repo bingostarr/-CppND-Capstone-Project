@@ -10,7 +10,7 @@
 
 #include <vector>
 #include "defines.hpp"
-#include "matrix.hpp"
+#include "matrix3d.hpp"
 
 namespace capstone {
 namespace base {
@@ -55,15 +55,15 @@ public:
     ~DatasetImage() final = default;
     void init() final;
     std::string showIndex(const int& index);
-    Matrix& operator()(const int& i) {
+    Matrix3d& operator()(const int& i) {
         return m_data[i];
     }
-    const Matrix& operator()(const int& i) const {
+    const Matrix3d& operator()(const int& i) const {
         return m_data[i];
     }
 
 private:
-    std::vector<Matrix> m_data;
+    std::vector<Matrix3d> m_data;
     void pad(const uint32_t& nrows,
              const uint32_t& p,
              std::vector<double>& data);
