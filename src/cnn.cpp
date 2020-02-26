@@ -7,10 +7,20 @@
 
 #include "cnn.hpp"
 #include <cassert>
+#include <random>
+#include <algorithm>
+
+#if 1
+#include <iostream>
+#endif
 #include "defines.hpp"
 
 namespace capstone {
 namespace base {
+
+static std::random_device device;
+static std::mt19937 generator(device());
+static std::uniform_int_distribution<int> distribution(0, NIMAGES - 1);
 
 Cnn::Cnn() {
     m_layers.clear();
@@ -74,27 +84,45 @@ Cnn::Cnn() {
 
 void Cnn::train(DatasetImage& images,
                 DatasetLabel& labels) {
+    assert(images.getNImages() == labels.getNImages());
     uint32_t nImages = images.getNImages();
-    uint32_t nBatches = 1;//nImages/BATCHSIZE;
+    uint32_t nBatches = nImages/BATCHSIZE;
     double loss = 0.0;
     double lossCumul = 0.0;
-    double lGain = 100.0;
     int nlayers = m_layers.size();
     double lrate = LRATE/BATCHSIZE;
 
     for (int epoch = 0; epoch < EPOCHS; ++epoch) {
         for (int bIndex = 0; bIndex < nBatches; ++bIndex) {
-//            arma::vec batch(BATCH_SIZE, arma::fill::randu);
-//            batch *= (TRAIN_DATA_SIZE - 1);
-            for (int imgIndex = 0; imgIndex < 1; ++imgIndex) {
+            std::vector<int> imgBatch{};
+            for (int i = 0; i < BATCHSIZE; ++i) {
+                imgBatch.push_back(distribution(generator));
+            }
+            for (int imgIndex = 0; imgIndex < BATCHSIZE; ++imgIndex) {
+                int i = imgBatch[imgIndex];
+                Matrix3d inputImage(images(i));
+#if 1
+                std::cout << "e: " << epoch;
+                std::cout << "\tb: " << bIndex;
+                std::cout << "\ti: " << imgIndex;
+                std::cout << "\td: " << i;
+                std::cout << "\tl: " << std::to_string(labels(i)) << "\t||INP=>";
+#endif
                 for (int lIndex = 0; lIndex < nlayers; ++lIndex) {
+#if 1
+                std::cout << LAYERTYPESTR[static_cast<int>(m_layers[lIndex]->getType())] << "=>";
+#endif
                     if (0 == lIndex) {
-                        m_layers[lIndex]->forward(images(imgIndex), m_outputs[lIndex]);
+                        m_layers[lIndex]->forward(inputImage, m_outputs[lIndex]);
                     } else {
+                        if (nlayers - 1 == lIndex) {
+                            m_outputs[lIndex].zero();
+                            m_outputs[lIndex].at(labels(i), 0, 0) = 1;
+                        }
                         m_layers[lIndex]->forward(m_outputs[lIndex - 1], m_outputs[lIndex]);
                     }
                     if (LAYERTYPE::FULL == m_layers[lIndex]->getType()) {
-                        m_outputs[lIndex] = m_outputs[lIndex]/lGain;
+                        m_outputs[lIndex] = m_outputs[lIndex]/FGAIN;
                     }
                     if (LAYERTYPE::LOSS == m_layers[lIndex]->getType()) {
                         std::shared_ptr<LayerLoss> x = std::static_pointer_cast<LayerLoss>(m_layers[lIndex]);
@@ -104,6 +132,9 @@ void Cnn::train(DatasetImage& images,
                 }
                 Matrix3d y(CubeSize_t(1,1));
                 for (int lIndex = nlayers - 1; lIndex >= 0; lIndex--) {
+#if 1
+                    std::cout << LAYERTYPESTR[static_cast<int>(m_layers[lIndex]->getType())] << "=>";
+#endif
                     if (nlayers - 1 == lIndex) {
                         m_layers[lIndex]->backward(y);
                     } else {
@@ -113,157 +144,74 @@ void Cnn::train(DatasetImage& images,
                 for (int lIndex = 0; lIndex < nlayers; ++lIndex) {
                     m_layers[lIndex]->update(lrate);
                 }
+#if 1
+                std::cout << "OUT||\tloss: " << loss << std::endl;
+#endif
             }
         }
-    }
-
-#if 0
-
-          r1.Forward(c1Out, r1Out);
-          mp1.Forward(r1Out, mp1Out);
-          c2.Forward(mp1Out, c2Out);
-          r2.Forward(c2Out, r2Out);
-          mp2.Forward(r2Out, mp2Out);
-          d.Forward(mp2Out, dOut);
-          dOut /= 100;
-          s.Forward(dOut, sOut);
-
-          // Compute the loss
-          l.Forward(sOut, trainLabels[batch[i]]);
-          lossCumul += loss;
-
-          // Backward pass
-          l.Backward();
-          arma::vec gradWrtPredictedDistribution =
-              l.getGradientWrtPredictedDistribution();
-          s.Backward(gradWrtPredictedDistribution);
-          arma::vec gradWrtSIn = s.getGradientWrtInput();
-          d.Backward(gradWrtSIn);
-          arma::cube gradWrtDIn = d.getGradientWrtInput();
-          mp2.Backward(gradWrtDIn);
-          arma::cube gradWrtMP2In = mp2.getGradientWrtInput();
-          r2.Backward(gradWrtMP2In);
-          arma::cube gradWrtR2In = r2.getGradientWrtInput();
-          c2.Backward(gradWrtR2In);
-          arma::cube gradWrtC2In = c2.getGradientWrtInput();
-          mp1.Backward(gradWrtC2In);
-          arma::cube gradWrtMP1In = mp1.getGradientWrtInput();
-          r1.Backward(gradWrtMP1In);
-          arma::cube gradWrtR1In = r1.getGradientWrtInput();
-          c1.Backward(gradWrtR1In);
-          arma::cube gradWrtC1In = c1.getGradientWrtInput();
-        }
-
-        // Update params
-        d.UpdateWeightsAndBiases(BATCH_SIZE, LEARNING_RATE);
-        c1.UpdateFilterWeights(BATCH_SIZE, LEARNING_RATE);
-        c2.UpdateFilterWeights(BATCH_SIZE, LEARNING_RATE);
-      }
-
-  #if DEBUG
-      // Output loss on training dataset after each epoch
-      std::cout << DEBUG_PREFIX << std::endl;
-      std::cout << DEBUG_PREFIX << "Training loss: "
-          << lossCumul / (BATCH_SIZE * NUM_BATCHES) << std::endl;
-  #endif
-
-      // Compute the training accuracy after epoch
-      double correct = 0.0;
-      for (size_t i = 0; i < TRAIN_DATA_SIZE; i++)
-      {
-        // Forward pass
-        c1.Forward(trainData[i], c1Out);
-        r1.Forward(c1Out, r1Out);
-        mp1.Forward(r1Out, mp1Out);
-        c2.Forward(mp1Out, c2Out);
-        r2.Forward(c2Out, r2Out);
-        mp2.Forward(r2Out, mp2Out);
-        d.Forward(mp2Out, dOut);
-        dOut /= 100;
-        s.Forward(dOut, sOut);
-
-        if (trainLabels[i].index_max() == sOut.index_max())
-          correct += 1.0;
-      }
-
-  #if DEBUG
-      // Output accuracy on training dataset after each epoch
-      std::cout << DEBUG_PREFIX
-          << "Training accuracy: " << correct/TRAIN_DATA_SIZE << std::endl;
-  #endif
-
-      // Compute validation accuracy after epoch
-      lossCumul = 0.0;
-      correct = 0.0;
-      for (size_t i = 0; i < VALIDATION_DATA_SIZE; i++)
-      {
-        // Forward pass
-        c1.Forward(validationData[i], c1Out);
-        r1.Forward(c1Out, r1Out);
-        mp1.Forward(r1Out, mp1Out);
-        c2.Forward(mp1Out, c2Out);
-        r2.Forward(c2Out, r2Out);
-        mp2.Forward(r2Out, mp2Out);
-        d.Forward(mp2Out, dOut);
-        dOut /= 100;
-        s.Forward(dOut, sOut);
-
-        lossCumul += l.Forward(sOut, validationLabels[i]);
-
-        if (validationLabels[i].index_max() == sOut.index_max())
-          correct += 1.0;
-      }
-
-  #if DEBUG
-      // Output validation loss after each epoch
-      std::cout << DEBUG_PREFIX
-          << "Validation loss: " << lossCumul / (BATCH_SIZE * NUM_BATCHES)
-          << std::endl;
-
-      // Output validation accuracy after each epoch
-      std::cout << DEBUG_PREFIX
-          << "Val accuracy: " << correct / VALIDATION_DATA_SIZE << std::endl;
-      std::cout << DEBUG_PREFIX << std::endl;
-  #endif
-
-      // Reset cumulative loss and correct count
-      lossCumul = 0.0;
-      correct = 0.0;
-
-      // Write results on test data to results csv
-      std::fstream fout("results_epoch_" + std::to_string(epoch) + ".csv",
-                        std::ios::out);
-      fout << "ImageId,Label" << std::endl;
-      for (size_t i=0; i<TEST_DATA_SIZE; i++)
-      {
-        // Forward pass
-        c1.Forward(testData[i], c1Out);
-        r1.Forward(c1Out, r1Out);
-        mp1.Forward(r1Out, mp1Out);
-        c2.Forward(mp1Out, c2Out);
-        r2.Forward(c2Out, r2Out);
-        mp2.Forward(r2Out, mp2Out);
-        d.Forward(mp2Out, dOut);
-        dOut /= 100;
-        s.Forward(dOut, sOut);
-
-        fout << std::to_string(i+1) << ","
-            << std::to_string(sOut.index_max()) << std::endl;
-      }
-      fout.close();
-    }
+#if 1
+        std::cout << "LOSS: " << lossCumul / (nBatches * BATCHSIZE) << std::endl;
 #endif
+    }
 }
 
-void Cnn::test(DatasetImage& images,
-               DatasetLabel& labels) {
-
+TestResult_t Cnn::test(DatasetImage& images,
+                       DatasetLabel& labels,
+                       const int& nImages) {
+    assert(images.getNImages() == labels.getNImages());
+    assert(nImages <= labels.getNImages());
+    TestResult_t t {};
+    double loss = 0.0;
+    int nlayers = m_layers.size();
+    for (int imgIndex = 0; imgIndex < nImages; ++imgIndex) {
+#if 1
+        std::cout << "i: " << imgIndex;
+        std::cout << "\tinp: " << std::to_string(labels(imgIndex)) << "\t||INP=>";
+#endif
+        Matrix3d inputImage(images(imgIndex));
+        for (int lIndex = 0; lIndex < nlayers; ++lIndex) {
+#if 1
+        std::cout << LAYERTYPESTR[static_cast<int>(m_layers[lIndex]->getType())] << "=>";
+#endif
+            if (0 == lIndex) {
+                m_layers[lIndex]->forward(inputImage, m_outputs[lIndex]);
+            } else {
+                if (nlayers - 1 == lIndex) {
+                    m_outputs[lIndex].zero();
+                    m_outputs[lIndex].at(labels(imgIndex), 0, 0) = 1;
+                }
+                m_layers[lIndex]->forward(m_outputs[lIndex - 1], m_outputs[lIndex]);
+            }
+            if (LAYERTYPE::FULL == m_layers[lIndex]->getType()) {
+                m_outputs[lIndex] = m_outputs[lIndex]/FGAIN;
+            }
+            if (LAYERTYPE::LOSS == m_layers[lIndex]->getType()) {
+                std::shared_ptr<LayerLoss> x = std::static_pointer_cast<LayerLoss>(m_layers[lIndex]);
+                loss = x->getLoss();
+            }
+        }
+        std::vector<double> v = m_outputs[nlayers - 2].vectorize();
+        int o = std::max_element(v.begin(), v.end()) - v.begin();
+#if 1
+        std::cout << "OUT||\tout: " << std::to_string(labels(o)) << "\tloss: " << loss << std::endl;
+#endif
+        t.log(labels(imgIndex), labels(o), loss);
+    }
+    return t;
 }
 
 std::string Cnn::show() {
     std::string x = "CNN Architecture\n";
     for (std::shared_ptr<Layer> p : m_layers) {
         x += p->show();
+    }
+    return x;
+}
+
+std::string Cnn::showAll() {
+    std::string x = "CNN Values\n";
+    for (std::shared_ptr<Layer> p : m_layers) {
+        x += p->showAll();
     }
     return x;
 }

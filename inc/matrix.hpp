@@ -10,6 +10,7 @@
 
 #include <memory>
 #include <vector>
+#include <utility>
 #include "defines.hpp"
 
 namespace capstone {
@@ -24,8 +25,8 @@ public:
     Matrix(const Matrix& m);
     Matrix(Matrix&& m);
     ~Matrix() = default;
-    const Matrix operator=(const Matrix& m) const;
-    const Matrix operator=(Matrix&& m) const;
+    Matrix operator=(const Matrix& m);
+    Matrix operator=(Matrix&& m);
     const Matrix operator+(const Matrix& m) const;
     const Matrix operator+(Matrix&& m) const;
     const Matrix operator-(const Matrix& m) const;
@@ -43,8 +44,11 @@ public:
     double& at(const int& i, const int& j);
     const double& at(const int& i, const int& j) const;
 
-    inline const ImageSize_t getImageSize() const {
+    inline const ImageSize_t& getImageSize() const {
         return m_size;
+    }
+    inline ImageSize_t&& moveImageSize() {
+        return std::move(m_size);
     }
     inline const uint32_t getSize() const {
         return m_size.getSize();
@@ -52,6 +56,10 @@ public:
     inline const uint32_t getNPixels() const {
         return m_size.nPixels();
     }
+    inline std::unique_ptr<double[]>&& moveMatrix() {
+        return std::move(m_matrix);
+    }
+
     std::string show();
     const double sum() const;
     const Coords_t getIndexMax() const;

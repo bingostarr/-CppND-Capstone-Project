@@ -16,11 +16,13 @@ namespace capstone {
 namespace base {
 
 Dataset::Dataset(const std::string& filename,
-                 const DATATYPE& dataType)
+                 const DATATYPE& dataType,
+                 const uint32_t& nImages)
         : m_synch{},
           m_filename(filename),
           m_magicNumber(0),
-          m_nImages(0),
+          m_nImages(nImages),
+          m_nImagesTotal(0),
           m_dataType(dataType),
           m_dataTypeStr((dataType == DATATYPE::TEST)? "test": "train") {
 }
@@ -35,6 +37,7 @@ std::string Dataset::show() {
     x += "\ttype: " + m_dataTypeStr + "\n";
     x += "\tmagic number: " + std::to_string(m_magicNumber)+ "\n";
     x += "\timages: " + std::to_string(m_nImages)+ "\n";
+    x += "\timagesTotal: " + std::to_string(m_nImagesTotal)+ "\n";
     x += "}";
     return x;
 }
@@ -53,20 +56,21 @@ void DatasetImage::init() {
     assert(!input.fail());
     m_data.clear();
     m_magicNumber = 0;
-    m_nImages = 0;
+    m_nImagesTotal = 0;
     uint32_t nrows = 0;
     uint32_t ncols = 0;
     std::vector<double> data{};
     char c;
     int count = 0;
     int pixelCount = 0;
+    int nImageCount = 0;
     while (input.get(c)) {
         uint8_t k = static_cast<uint8_t>(c);
         if ((count >= 0) && (count < 4)) {
             m_magicNumber = (m_magicNumber << 8) | k;
         }
         else if ((count >= 4) && (count < 8)) {
-            m_nImages = (m_nImages << 8) | k;
+            m_nImagesTotal = (m_nImagesTotal << 8) | k;
         }
         else if ((count >= 8) && (count < 12)) {
             nrows = (nrows << 8) | k;
@@ -77,24 +81,25 @@ void DatasetImage::init() {
         else {
             assert(nrows == ncols); // square matrices only.
             assert((nrows % 2) == 0); // even number of rows and cols
-            data.push_back((static_cast<double>(k)) / SCALE);
+            data.push_back(static_cast<double>(k) / SCALE);
             pixelCount++;
             if (pixelCount == (nrows * ncols)) {
-                if (DATATYPE::TRAIN == m_dataType) {
-                    normalize(data);
-                }
+//                if (DATATYPE::TRAIN == m_dataType) {
+                normalize(data);
+//                }
                 ImageSize_t imgSize(INPUTSIZE);
                 if (nrows < INPUTSIZE) {
                     uint32_t p = (INPUTSIZE - nrows) / 2;
                     pad(nrows, p, data);
                 }
                 Matrix m(imgSize, data);
-                CubeSize_t cb(1, imgSize.getSize());
-                Matrix3d m1(cb);
-                m1.at(0) = m;
-                m_data.push_back(m1);
+                m_data.push_back(m);
+                nImageCount++;
                 data.clear();
                 pixelCount = 0;
+                if (nImageCount == m_nImages) {
+                    break;
+                }
             }
         }
         count++;
@@ -160,19 +165,24 @@ void DatasetLabel::init() {
     assert(!input.fail());
     m_data.clear();
     m_magicNumber = 0;
-    m_nImages = 0;
+    m_nImagesTotal = 0;
     char c;
     int count = 0;
+    int nImageCount = 0;
     while (input.get(c)) {
         uint8_t k = static_cast<uint8_t>(c);
         if ((count >= 0) && (count < 4)) {
             m_magicNumber = (m_magicNumber << 8) | k;
         }
         else if ((count >= 4) && (count < 8)) {
-            m_nImages = (m_nImages << 8) | k;
+            m_nImagesTotal = (m_nImagesTotal << 8) | k;
         }
         else {
             m_data.push_back(k);
+            nImageCount++;
+            if (nImageCount == m_nImages) {
+                break;
+            }
         }
         count++;
     }

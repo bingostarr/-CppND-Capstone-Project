@@ -10,7 +10,7 @@
 
 #include <vector>
 #include "defines.hpp"
-#include "matrix3d.hpp"
+#include "matrix.hpp"
 
 namespace capstone {
 namespace base {
@@ -18,7 +18,8 @@ namespace base {
 class Dataset {
 public:
     explicit Dataset(const std::string& filename,
-                     const DATATYPE& dataType);
+                     const DATATYPE& dataType,
+                     const uint32_t& nImages = NIMAGES);
     virtual ~Dataset() = default;
     virtual void init() = 0;
     std::string show();
@@ -44,6 +45,7 @@ protected:
     std::string m_filename;
     uint32_t m_magicNumber;
     uint32_t m_nImages;
+    uint32_t m_nImagesTotal;
     DATATYPE m_dataType;
     std::string m_dataTypeStr;
 };
@@ -55,15 +57,15 @@ public:
     ~DatasetImage() final = default;
     void init() final;
     std::string showIndex(const int& index);
-    Matrix3d& operator()(const int& i) {
+    Matrix& operator()(const int& i) {
         return m_data[i];
     }
-    const Matrix3d& operator()(const int& i) const {
+    const Matrix& operator()(const int& i) const {
         return m_data[i];
     }
 
 private:
-    std::vector<Matrix3d> m_data;
+    std::vector<Matrix> m_data;
     void pad(const uint32_t& nrows,
              const uint32_t& p,
              std::vector<double>& data);

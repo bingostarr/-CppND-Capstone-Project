@@ -49,6 +49,17 @@ public:
     virtual void reset() {
         //
     }
+    std::string showAll() {
+        std::string y = LAYERTYPESTR[static_cast<int>(m_attr.type)] + " ";
+        std::string x = "\n" + y + "input: " + m_cachedInput.show();
+        x += "\n" + y + "output: " + m_cachedOutput.show();
+        x += "\n" + y + "gradient: " + m_gradient.show() + "\n";
+//        x += "\n" + showExtra(const std::string& y) + "\n";
+        return x;
+    }
+//    virtual std::string showExtra(const std::string& y) {
+//        return "";
+//    }
     virtual std::string show() = 0;
 protected:
     LayerAttr_t m_attr;
@@ -68,7 +79,6 @@ public:
     void reset() final;
     std::string show() final;
 private:
-    Matrix3d m_gradientCumul;
     std::vector<Matrix3d> m_weights;
     std::vector<Matrix3d> m_weightsCumul;
 };

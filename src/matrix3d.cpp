@@ -7,6 +7,9 @@
 
 #include "matrix3d.hpp"
 #include <cassert>
+#if 1
+#include <iostream>
+#endif
 
 namespace capstone {
 namespace base {
@@ -31,22 +34,31 @@ Matrix3d::Matrix3d(const Matrix3d& m)
 }
 
 Matrix3d::Matrix3d(Matrix3d&& m)
-        : m_size(m.getCubeSize()) {
+        : m_size(std::move(m.m_size)),
+          m_matrix3d(std::move(m.m_matrix3d)) {
+}
+
+Matrix3d::Matrix3d(const Matrix& m)
+        : m_size(CubeSize_t(1, m.getSize())) {
     m_matrix3d.clear();
-    for (int i = 0; i < getNLayers(); ++i) {
-        Matrix x(m.at(i));
-        m_matrix3d.push_back(x);
+    m_matrix3d.push_back(m);
+}
+
+Matrix3d Matrix3d::operator=(const Matrix3d& m) {
+    if (&m == this) {
+        return *this;
     }
+    m_size = m.getCubeSize();
+    for (int i = 0; i < getNLayers(); ++i) {
+        at(i) = m.at(i);
+    }
+    return *this;
 }
 
-const Matrix3d Matrix3d::operator=(const Matrix3d& m) const {
-    Matrix3d x(m);
-    return x;
-}
-
-const Matrix3d Matrix3d::operator=(Matrix3d&& m) const {
-    Matrix3d x(m);
-    return x;
+Matrix3d Matrix3d::operator=(Matrix3d&& m) {
+    m_size = moveCubeSize();
+    m_matrix3d = moveMatrix3d();
+    return *this;
 }
 
 const Matrix3d Matrix3d::operator+(const Matrix3d& m) const {
@@ -212,8 +224,15 @@ const Matrix3d Matrix3d::subMatrix3d(const int& c,
                                      const int& a,
                                      const int& b,
                                      const CubeSize_t& size) const {
+#if 1
+    if (!m_size.inRange(c, a, b)) {
+        std::cout << "(" << c << "," << a << "," << b << ") not in " << m_size.show() << std::endl;
+        assert(false);
+    }
+#else
     assert(m_size.inRange(c, a, b));
-    assert(size < m_size);
+#endif
+    assert(!(size > m_size));
     assert((c + size.getNLayers()) <= getNLayers());
     assert((a + size.getSize()) <= getSize());
     assert((b + size.getSize()) <= getSize());
@@ -233,7 +252,7 @@ void Matrix3d::fillSubMatrix3d(const int& c,
                                const int& b,
                                const Matrix3d& m) {
     assert(m_size.inRange(c, a, b));
-    assert(m.getCubeSize() < m_size);
+    assert(!(m.getCubeSize() > m_size));
     assert((c + m.getNLayers()) <= getNLayers());
     assert((a + m.getSize()) <= getSize());
     assert((b + m.getSize()) <= getSize());
@@ -252,6 +271,19 @@ const std::vector<double> Matrix3d::vectorize() const
     std::vector<double> v{};
     for (int k = 0; k < getNLayers(); ++k) {
         v.push_back(m_matrix3d[k].at(0,0));
+    }
+    return v;
+}
+
+const std::vector<double> Matrix3d::vectorizeColWise() const
+{
+    std::vector<double> v{};
+    for (int k = 0; k < getNLayers(); ++k) {
+        for (int c = 0; c < getSize(); ++c) {
+            for (int r = 0; r < getSize(); ++r) {
+                v.push_back(at(k,r,c));
+            }
+        }
     }
     return v;
 }

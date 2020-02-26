@@ -7,19 +7,21 @@
 
 #include "matrix.hpp"
 #include <cassert>
-#include <cmath>
 #include <algorithm>
 #include <random>
+#include <ctime>
+#include <cmath>
 
 namespace capstone {
 namespace base {
+
+static std::default_random_engine g_generator(std::time(0));
+static std::normal_distribution<double> g_distribution(0, 1);
 
 Matrix::Matrix(const ImageSize_t& size,
                const MTXTYPE& mtype)
         : m_size(size),
           m_matrix {std::make_unique<double[]>(m_size.nPixels())} {
-    std::default_random_engine generator;
-    std::normal_distribution<double> distribution(0, 1);
     for (int i = 0; i < getSize(); ++i) {
         for (int j = 0; j < getSize(); ++j) {
             switch (mtype) {
@@ -33,7 +35,7 @@ Matrix::Matrix(const ImageSize_t& size,
             {
                 double x = 3;
                 while (std::abs(x) > 2.0) {
-                    x = distribution(generator);
+                    x = g_distribution(g_generator);
                 }
                 at(i,j) = x;
                 break;
@@ -66,37 +68,27 @@ Matrix::Matrix(const Matrix& m)
 }
 
 Matrix::Matrix(Matrix&& m)
-        : m_size(m.getSize()),
-          m_matrix {std::make_unique<double[]>(m_size.nPixels())} {
-    int k = 0;
+        : m_size(std::move(m.m_size)),
+          m_matrix(std::move(m.m_matrix)) {
+}
+
+Matrix Matrix::operator=(const Matrix& m) {
+    if (&m == this) {
+        return *this;
+    }
+    m_size = m.getImageSize();
     for (int i = 0; i < getSize(); ++i) {
         for (int j = 0; j < getSize(); ++j) {
-            m_matrix[k] = m(i, j);
-            k++;
+            at(i,j) = m(i,j);
         }
     }
+    return *this;
 }
 
-const Matrix Matrix::operator=(const Matrix& m) const {
-    Matrix x(m);
-//    Matrix x(m_size, MTXTYPE::ZEROS);
-//    for (int i = 0; i < getSize(); ++i) {
-//        for (int j = 0; j < getSize(); ++j) {
-//            x(i,j) = m(i,j);
-//        }
-//    }
-    return x;
-}
-
-const Matrix Matrix::operator=(Matrix&& m) const {
-    Matrix x(m);
-//    Matrix x(m_size, MTXTYPE::ZEROS);
-//    for (int i = 0; i < getSize(); ++i) {
-//        for (int j = 0; j < getSize(); ++j) {
-//            x(i,j) = m(i,j);
-//        }
-//    }
-    return x;
+Matrix Matrix::operator=(Matrix&& m) {
+    m_size = moveImageSize();
+    m_matrix = moveMatrix();
+    return *this;
 }
 
 const Matrix Matrix::operator+(const Matrix& m) const {
@@ -272,7 +264,7 @@ const Matrix Matrix::subMatrix(const int& a,
                                const ImageSize_t& size) const
 {
     assert(m_size.inRange(a, b));
-    assert(size < m_size);
+    assert(!(size > m_size));
     assert((a + size.getSize()) <= getSize());
     assert((b + size.getSize()) <= getSize());
     Matrix x(size, MTXTYPE::ZEROS);

@@ -3,6 +3,7 @@
 #include "dataset.hpp"
 #include "imgproc.hpp"
 #include "cnn.hpp"
+
 int main(int argc, char **argv) {
     std::cout << "Hello World!" << std::endl;
     capstone::base::DatasetImage imgTr("train-images-idx3-ubyte", capstone::base::DATATYPE::TRAIN);
@@ -12,9 +13,6 @@ int main(int argc, char **argv) {
     labTr.wait();
     std::cout << labTr.show() << std::endl;
     assert(imgTr.getNImages() == labTr.getNImages());
-    for (int i = 0; i < 3; ++i) {
-        capstone::base::show(imgTr(i).at(0), std::to_string(labTr(i)));
-    }
     capstone::base::DatasetImage imgTe("t10k-images-idx3-ubyte", capstone::base::DATATYPE::TEST);
     imgTe.wait();
     std::cout << imgTe.show() << std::endl;
@@ -22,11 +20,11 @@ int main(int argc, char **argv) {
     labTe.wait();
     std::cout << labTe.show() << std::endl;
     assert(imgTe.getNImages() == labTe.getNImages());
-    for (int i = 0; i < 3; ++i) {
-        capstone::base::show(imgTe(i).at(0), std::to_string(labTe(i)));
-    }
-    capstone::base::Cnn cnn;
+    capstone::base::Cnn& cnn = capstone::base::Cnn::getInstance();
     std::cout << cnn.show() << std::endl;
     cnn.train(imgTr, labTr);
+    int nTests = 10;
+    capstone::base::TestResult_t t = cnn.test(imgTe, labTe, nTests);
+    std::cout << t.showAll() << std::endl;
     return 0;
 }

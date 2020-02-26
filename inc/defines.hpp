@@ -9,6 +9,8 @@
 #define INC_DEFINES_HPP_
 
 #include <cassert>
+#include <vector>
+#include <string>
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
@@ -17,9 +19,10 @@
 namespace capstone {
 namespace base {
 
+static const uint32_t NIMAGES = 2000;
 static const uint32_t EPOCHS = 10;
-static const uint32_t CNNLAYERS = 9;
 static const uint32_t BATCHSIZE = 10;
+static const uint32_t CNNLAYERS = 9;
 static const uint32_t INPUTSIZE = 28;
 static const uint32_t INPUTLAYERS = 1;
 static const uint32_t FILTERSIZE = 5;
@@ -29,6 +32,7 @@ static const uint32_t POOLSIZE = 2;
 static const uint32_t OUTPUTSIZE = 10;
 static const double SCALE = 255.0;
 static const double LRATE = 0.05;
+static const double FGAIN = 100;
 
 enum class MTXTYPE {
     ZEROS,
@@ -51,6 +55,8 @@ enum class LAYERTYPE {
     LOSS
 };
 
+static const std::vector<std::string> LAYERTYPESTR = {"CONV","RELU","POOL","FULL","SMAX","LOSS"};
+
 enum class POOLTYPE {
     AVG,
     MAX
@@ -68,7 +74,21 @@ typedef struct ImageSize {
     ImageSize(const uint32_t& n)
             : size(n),
               npixels(size * size) { }
-    std::string show() {
+    ImageSize operator=(const ImageSize& m) {
+        size = m.getSize();
+        npixels = m.nPixels();
+        return *this;
+    }
+    ImageSize operator=(ImageSize&& m) {
+        if (this == &m)
+        {
+            return *this;
+        }
+        size = std::move(m.size);
+        npixels = std::move(m.npixels);
+        return *this;
+    }
+    const std::string show() const {
         std::string x = std::to_string(size) + "X" + std::to_string(size);
         return x;
     }
@@ -106,7 +126,21 @@ typedef struct CubeSize {
              const uint32_t& i)
             : nlayers(n),
               size(ImageSize_t(i)) { }
-    std::string show() {
+    CubeSize operator=(const CubeSize& m) {
+        nlayers = m.getNLayers();
+        size = m.getSize();
+        return *this;
+    }
+    CubeSize operator=(CubeSize&& m) {
+        if (this == &m)
+        {
+            return *this;
+        }
+        nlayers = std::move(m.nlayers);
+        size = std::move(m.size);
+        return *this;
+    }
+    const std::string show() const {
         std::string x = std::to_string(nlayers) + "X" + size.show();
         return x;
     }
@@ -203,6 +237,33 @@ typedef struct Coords {
             : i(ii), j(jj) {
     }
 } Coords_t;
+
+typedef struct TestResult {
+    uint32_t size = {0};
+    uint32_t failures = {0};
+    std::vector<int> input{};
+    std::vector<int> output{};
+    std::vector<double> loss{};
+    void log(const int& i,
+             const int& o,
+             const double& l) {
+        input.push_back(i);
+        output.push_back(o);
+        loss.push_back(l);
+        size++;
+        if (i != o) {
+            failures++;
+        }
+    }
+    const std::string showAll() const {
+        std::string s = "---";
+        if (size > 0) {
+            s = "accuracy: " + std::to_string(1 - failures / size);
+        }
+        return s;
+    }
+} TestResult_t;
+
 } /* base */
 } /* capstone */
 #endif /* INC_DEFINES_HPP_ */

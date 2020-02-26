@@ -21,9 +21,10 @@ public:
              const MTXTYPE& mtxType = MTXTYPE::ZEROS);
     Matrix3d(const Matrix3d& m);
     Matrix3d(Matrix3d&& m);
+    Matrix3d(const Matrix& m);
     ~Matrix3d() = default;
-    const Matrix3d operator=(const Matrix3d& m) const;
-    const Matrix3d operator=(Matrix3d&& m) const;
+    Matrix3d operator=(const Matrix3d& m);
+    Matrix3d operator=(Matrix3d&& m);
     const Matrix3d operator+(const Matrix3d& m) const;
     const Matrix3d operator+(Matrix3d&& m) const;
     const Matrix3d operator-(const Matrix3d& m) const;
@@ -54,6 +55,9 @@ public:
     inline const CubeSize_t& getCubeSize() const {
         return m_size;
     }
+    inline CubeSize_t&& moveCubeSize() {
+        return std::move(m_size);
+    }
     inline const ImageSize_t& getImageSize() const {
         return m_size.getImageSize();
     }
@@ -62,6 +66,9 @@ public:
     }
     inline const uint32_t& getSize() const {
         return m_size.getSize();
+    }
+    inline std::vector<Matrix>&& moveMatrix3d() {
+        return std::move(m_matrix3d);
     }
     std::string show();
     const double sum() const;
@@ -74,6 +81,7 @@ public:
                          const int& b,
                          const Matrix3d& m);
     const std::vector<double> vectorize() const;
+    const std::vector<double> vectorizeColWise() const;
     void zero();
 private:
     CubeSize_t m_size;
