@@ -9,10 +9,9 @@
 #include <cassert>
 #include <random>
 #include <algorithm>
-
-#if 1
 #include <iostream>
-#endif
+#include <chrono>
+#include <ctime>
 #include "defines.hpp"
 
 namespace capstone {
@@ -85,13 +84,14 @@ Cnn::Cnn() {
 void Cnn::train(DatasetImage& images,
                 DatasetLabel& labels) {
     assert(images.getNImages() == labels.getNImages());
+    auto start = std::chrono::system_clock::now();
     uint32_t nImages = images.getNImages();
     uint32_t nBatches = nImages/BATCHSIZE;
     double loss = 0.0;
     double lossCumul = 0.0;
     int nlayers = m_layers.size();
     double lrate = LRATE/BATCHSIZE;
-
+    std::cout << "TRAIN" << std::endl;
     for (int epoch = 0; epoch < EPOCHS; ++epoch) {
         for (int bIndex = 0; bIndex < nBatches; ++bIndex) {
             std::vector<int> imgBatch{};
@@ -101,15 +101,13 @@ void Cnn::train(DatasetImage& images,
             for (int imgIndex = 0; imgIndex < BATCHSIZE; ++imgIndex) {
                 int i = imgBatch[imgIndex];
                 Matrix3d inputImage(images(i));
-#if 1
                 std::cout << "e: " << epoch;
                 std::cout << "\tb: " << bIndex;
                 std::cout << "\ti: " << imgIndex;
                 std::cout << "\td: " << i;
-                std::cout << "\tl: " << std::to_string(labels(i)) << "\t||INP=>";
-#endif
+                std::cout << "\tinp: " << std::to_string(labels(i));
                 for (int lIndex = 0; lIndex < nlayers; ++lIndex) {
-#if 1
+#if 0
                 std::cout << LAYERTYPESTR[static_cast<int>(m_layers[lIndex]->getType())] << "=>";
 #endif
                     if (0 == lIndex) {
@@ -132,7 +130,7 @@ void Cnn::train(DatasetImage& images,
                 }
                 Matrix3d y(CubeSize_t(1,1));
                 for (int lIndex = nlayers - 1; lIndex >= 0; lIndex--) {
-#if 1
+#if 0
                     std::cout << LAYERTYPESTR[static_cast<int>(m_layers[lIndex]->getType())] << "=>";
 #endif
                     if (nlayers - 1 == lIndex) {
@@ -144,14 +142,14 @@ void Cnn::train(DatasetImage& images,
                 for (int lIndex = 0; lIndex < nlayers; ++lIndex) {
                     m_layers[lIndex]->update(lrate);
                 }
-#if 1
-                std::cout << "OUT||\tloss: " << loss << std::endl;
-#endif
+                std::vector<double> v = m_outputs[nlayers - 2].vectorize();
+                int o = std::max_element(v.begin(), v.end()) - v.begin();
+                std::cout << "\tout: " << std::to_string(labels(o)) << "\tloss: " << loss;
+                std::chrono::duration<double> procTime = std::chrono::system_clock::now() - start;
+                std::cout << "\tt: " << procTime.count() << std::endl;
             }
         }
-#if 1
-        std::cout << "LOSS: " << lossCumul / (nBatches * BATCHSIZE) << std::endl;
-#endif
+        loss = 0;
     }
 }
 
@@ -163,14 +161,13 @@ TestResult_t Cnn::test(DatasetImage& images,
     TestResult_t t {};
     double loss = 0.0;
     int nlayers = m_layers.size();
+    std::cout << "TEST" << std::endl;
     for (int imgIndex = 0; imgIndex < nImages; ++imgIndex) {
-#if 1
         std::cout << "i: " << imgIndex;
         std::cout << "\tinp: " << std::to_string(labels(imgIndex)) << "\t||INP=>";
-#endif
         Matrix3d inputImage(images(imgIndex));
         for (int lIndex = 0; lIndex < nlayers; ++lIndex) {
-#if 1
+#if 0
         std::cout << LAYERTYPESTR[static_cast<int>(m_layers[lIndex]->getType())] << "=>";
 #endif
             if (0 == lIndex) {
@@ -192,9 +189,7 @@ TestResult_t Cnn::test(DatasetImage& images,
         }
         std::vector<double> v = m_outputs[nlayers - 2].vectorize();
         int o = std::max_element(v.begin(), v.end()) - v.begin();
-#if 1
         std::cout << "OUT||\tout: " << std::to_string(labels(o)) << "\tloss: " << loss << std::endl;
-#endif
         t.log(labels(imgIndex), labels(o), loss);
     }
     return t;

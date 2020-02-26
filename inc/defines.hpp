@@ -19,8 +19,8 @@
 namespace capstone {
 namespace base {
 
-static const uint32_t NIMAGES = 2000;
-static const uint32_t EPOCHS = 10;
+static const uint32_t NIMAGES = 5000;
+static const uint32_t EPOCHS = 5;
 static const uint32_t BATCHSIZE = 10;
 static const uint32_t CNNLAYERS = 9;
 static const uint32_t INPUTSIZE = 28;
@@ -258,7 +258,7 @@ typedef struct TestResult {
     const std::string showAll() const {
         std::string s = "---";
         if (size > 0) {
-            s = "accuracy: " + std::to_string(1 - failures / size);
+            s = "accuracy: " + std::to_string(1 - (1.0 * failures) / size);
         }
         return s;
     }

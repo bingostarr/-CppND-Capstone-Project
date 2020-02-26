@@ -1,7 +1,6 @@
 #include <iostream>
 #include <cassert>
 #include "dataset.hpp"
-#include "imgproc.hpp"
 #include "cnn.hpp"
 
 int main(int argc, char **argv) {
