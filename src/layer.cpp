@@ -9,8 +9,7 @@
 #include <cassert>
 #include <math.h>
 #include <algorithm>
-
-#include <iostream>
+#include <limits>
 
 namespace capstone {
 namespace base {
@@ -188,7 +187,8 @@ LayerFull::LayerFull(const LayerAttr_t& attr)
         : Layer(attr),
           m_gradientCumul(Matrix3d(m_attr.inputSize)),
           m_biases(Matrix3d(m_attr.outputSize)),
-          m_biasesCumul(Matrix3d(m_attr.outputSize)) {
+          m_biasesCumul(Matrix3d(m_attr.outputSize)),
+          m_gain(FGAIN) {
     m_weights.clear();
     m_weightsCumul.clear();
     for (int i = 0; i < m_attr.outputSize.getNLayers(); ++i) {
@@ -205,7 +205,7 @@ void LayerFull::forward(Matrix3d& input,
     for (int k = 0; k < m_attr.outputSize.getNLayers(); ++k) {
         Matrix3d s(m_weights[k] * input);
         double sumv = s.sum();
-        output(k, 0, 0) = sumv + m_biases(k, 0, 0);
+        output(k, 0, 0) = (sumv + m_biases(k, 0, 0)) / m_gain;
     }
     m_cachedInput = input;
     m_cachedOutput = output;
@@ -284,7 +284,8 @@ void LayerLoss::forward(Matrix3d& input,
                         Matrix3d& output) {
     m_loss = 0;
     for (int i = 0; i < m_attr.outputSize.getNLayers(); ++i) {
-        m_loss += -1 * (output(i,0,0) * log(input(i,0,0)));
+        double d = std::max(input(i,0,0), std::numeric_limits<double>::min());
+        m_loss += -1 * (output(i,0,0) * log(d));
     }
     m_cachedInput = input;
     m_cachedOutput = output;

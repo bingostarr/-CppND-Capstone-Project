@@ -73,6 +73,7 @@ public:
     const Matrix product(Matrix& m) const;
     const std::vector<double> vectorize() const;
     void zero();
+    void normalize(const double& mu, const double& sigma2);
 
 private:
     ImageSize_t m_size;

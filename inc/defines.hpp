@@ -19,8 +19,9 @@
 namespace capstone {
 namespace base {
 
+static const uint32_t NIMAGESMAX = 60000;
 static const uint32_t NIMAGES = 5000;
-static const uint32_t EPOCHS = 5;
+static const uint32_t EPOCHS = 10;
 static const uint32_t BATCHSIZE = 10;
 static const uint32_t CNNLAYERS = 9;
 static const uint32_t INPUTSIZE = 28;
@@ -31,8 +32,9 @@ static const uint32_t NFILTERS2 = 16;
 static const uint32_t POOLSIZE = 2;
 static const uint32_t OUTPUTSIZE = 10;
 static const double SCALE = 255.0;
-static const double LRATE = 0.05;
-static const double FGAIN = 100;
+static const double LRATE = 0.001;
+static const double FGAIN = 1000;
+static const double SPLIT = 0.9;
 
 enum class MTXTYPE {
     ZEROS,
@@ -255,10 +257,21 @@ typedef struct TestResult {
             failures++;
         }
     }
+    const double getAccuracy() const {
+        return (1.0 - (1.0 * failures) / size);
+    }
+    const double getAvgLoss() const {
+        double l = 0;
+        for (double d : loss) {
+            l += d / loss.size();
+        }
+        return l;
+    }
     const std::string showAll() const {
         std::string s = "---";
         if (size > 0) {
-            s = "accuracy: " + std::to_string(1 - (1.0 * failures) / size);
+            s = "loss: " + std::to_string(getAvgLoss()) + "\t";
+            s += "accuracy: " + std::to_string(getAccuracy()) + "\n";
         }
         return s;
     }

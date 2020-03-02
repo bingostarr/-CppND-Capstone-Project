@@ -7,19 +7,13 @@
 
 #include "cnn.hpp"
 #include <cassert>
-#include <random>
 #include <algorithm>
 #include <iostream>
-#include <chrono>
-#include <ctime>
+#include <cmath>
 #include "defines.hpp"
 
 namespace capstone {
 namespace base {
-
-static std::random_device device;
-static std::mt19937 generator(device());
-static std::uniform_int_distribution<int> distribution(0, NIMAGES - 1);
 
 Cnn::Cnn() {
     m_layers.clear();
@@ -81,106 +75,100 @@ Cnn::Cnn() {
 
 }
 
-void Cnn::train(DatasetImage& images,
-                DatasetLabel& labels) {
-    assert(images.getNImages() == labels.getNImages());
-    auto start = std::chrono::system_clock::now();
-    uint32_t nImages = images.getNImages();
+void Cnn::train(DatapointSet& data) {
+    uint32_t nImages = data.getTrainSize();
     uint32_t nBatches = nImages/BATCHSIZE;
     double loss = 0.0;
     double lossCumul = 0.0;
     int nlayers = m_layers.size();
     double lrate = LRATE/BATCHSIZE;
-    std::cout << "TRAIN" << std::endl;
+    std::cout << "TRAIN START" << std::endl;
+    std::cout << "epoch\tbatch\timage\tinput\toutput\tpass\tloss" << std::endl;
     for (int epoch = 0; epoch < EPOCHS; ++epoch) {
+        data.shuffle();
         for (int bIndex = 0; bIndex < nBatches; ++bIndex) {
-            std::vector<int> imgBatch{};
-            for (int i = 0; i < BATCHSIZE; ++i) {
-                imgBatch.push_back(distribution(generator));
-            }
             for (int imgIndex = 0; imgIndex < BATCHSIZE; ++imgIndex) {
-                int i = imgBatch[imgIndex];
-                Matrix3d inputImage(images(i));
-                std::cout << "e: " << epoch;
-                std::cout << "\tb: " << bIndex;
-                std::cout << "\ti: " << imgIndex;
-                std::cout << "\td: " << i;
-                std::cout << "\tinp: " << std::to_string(labels(i));
+                Datapoint_t datapoint = data.nextTrainData();
+                int inp = static_cast<int>(datapoint.first);
+                Matrix3d inputImage(datapoint.second);
+                int outp = -1;
+                std::cout << epoch << "\t" << bIndex << "\t" << imgIndex << "\t" << inp << "\t";
                 for (int lIndex = 0; lIndex < nlayers; ++lIndex) {
-#if 0
-                std::cout << LAYERTYPESTR[static_cast<int>(m_layers[lIndex]->getType())] << "=>";
-#endif
                     if (0 == lIndex) {
                         m_layers[lIndex]->forward(inputImage, m_outputs[lIndex]);
                     } else {
                         if (nlayers - 1 == lIndex) {
                             m_outputs[lIndex].zero();
-                            m_outputs[lIndex].at(labels(i), 0, 0) = 1;
+                            m_outputs[lIndex].at(inp, 0, 0) = 1;
                         }
                         m_layers[lIndex]->forward(m_outputs[lIndex - 1], m_outputs[lIndex]);
-                    }
-                    if (LAYERTYPE::FULL == m_layers[lIndex]->getType()) {
-                        m_outputs[lIndex] = m_outputs[lIndex]/FGAIN;
                     }
                     if (LAYERTYPE::LOSS == m_layers[lIndex]->getType()) {
                         std::shared_ptr<LayerLoss> x = std::static_pointer_cast<LayerLoss>(m_layers[lIndex]);
                         loss = x->getLoss();
+                        if (std::isnan(loss)) {
+                            std::cout << "\n" << showAll() << std::endl;;
+                            assert(false);
+                        }
                         lossCumul += loss;
+                        std::vector<double> v = m_outputs[nlayers - 2].vectorize();
+                        outp = std::max_element(v.begin(), v.end()) - v.begin();
                     }
                 }
                 Matrix3d y(CubeSize_t(1,1));
                 for (int lIndex = nlayers - 1; lIndex >= 0; lIndex--) {
-#if 0
-                    std::cout << LAYERTYPESTR[static_cast<int>(m_layers[lIndex]->getType())] << "=>";
-#endif
                     if (nlayers - 1 == lIndex) {
                         m_layers[lIndex]->backward(y);
                     } else {
                         m_layers[lIndex]->backward(m_layers[lIndex + 1]->getGradient());
                     }
                 }
-                for (int lIndex = 0; lIndex < nlayers; ++lIndex) {
-                    m_layers[lIndex]->update(lrate);
-                }
-                std::vector<double> v = m_outputs[nlayers - 2].vectorize();
-                int o = std::max_element(v.begin(), v.end()) - v.begin();
-                std::cout << "\tout: " << std::to_string(labels(o)) << "\tloss: " << loss;
-                std::chrono::duration<double> procTime = std::chrono::system_clock::now() - start;
-                std::cout << "\tt: " << procTime.count() << std::endl;
+                std::cout << outp << "\t" << (inp == outp) << "\t" << loss << std::endl;
             }
+//            std::cout << "\nbefore update\n" << showAll() << std::endl;;
+            for (int lIndex = 0; lIndex < nlayers; ++lIndex) {
+                m_layers[lIndex]->update(lrate);
+            }
+//            std::cout << "\nafter update\n" << showAll() << std::endl;;
         }
+        std::cout << "epoch: " << epoch << "\t" << lossCumul / (nImages) << "\t";
+        TestResult_t t(test(data.getTrainData(), false));
+        std::cout << t.getAvgLoss() << "\t" << t.getAccuracy() << "\t";
+        TestResult_t t1(test(data.getValidData(), false));
+        std::cout << t1.getAvgLoss() << "\t" << t1.getAccuracy() << std::endl;
         loss = 0;
+        lossCumul = 0;
     }
+    std::cout << "\nTRAIN END" << std::endl;
 }
 
-TestResult_t Cnn::test(DatasetImage& images,
-                       DatasetLabel& labels,
-                       const int& nImages) {
-    assert(images.getNImages() == labels.getNImages());
-    assert(nImages <= labels.getNImages());
+TestResult_t Cnn::test(const std::vector<Datapoint_t>& data,
+                       const bool& show) {
+    uint32_t nImages = data.size();
     TestResult_t t {};
     double loss = 0.0;
     int nlayers = m_layers.size();
-    std::cout << "TEST" << std::endl;
+    if (show) {
+        std::cout << "TEST" << std::endl;
+        std::cout << "image\tinput\toutput\tpass\tloss" << std::endl;
+    }
     for (int imgIndex = 0; imgIndex < nImages; ++imgIndex) {
-        std::cout << "i: " << imgIndex;
-        std::cout << "\tinp: " << std::to_string(labels(imgIndex)) << "\t||INP=>";
-        Matrix3d inputImage(images(imgIndex));
+        Datapoint_t datapoint = data[imgIndex];
+        int inp = static_cast<int>(datapoint.first);
+        Matrix3d inputImage(datapoint.second);
+        int outp = -1;
+        if (show) {
+            std::cout << imgIndex << "\t" << inp;
+        }
         for (int lIndex = 0; lIndex < nlayers; ++lIndex) {
-#if 0
-        std::cout << LAYERTYPESTR[static_cast<int>(m_layers[lIndex]->getType())] << "=>";
-#endif
             if (0 == lIndex) {
                 m_layers[lIndex]->forward(inputImage, m_outputs[lIndex]);
             } else {
                 if (nlayers - 1 == lIndex) {
                     m_outputs[lIndex].zero();
-                    m_outputs[lIndex].at(labels(imgIndex), 0, 0) = 1;
+                    m_outputs[lIndex].at(inp, 0, 0) = 1;
                 }
                 m_layers[lIndex]->forward(m_outputs[lIndex - 1], m_outputs[lIndex]);
-            }
-            if (LAYERTYPE::FULL == m_layers[lIndex]->getType()) {
-                m_outputs[lIndex] = m_outputs[lIndex]/FGAIN;
             }
             if (LAYERTYPE::LOSS == m_layers[lIndex]->getType()) {
                 std::shared_ptr<LayerLoss> x = std::static_pointer_cast<LayerLoss>(m_layers[lIndex]);
@@ -188,9 +176,11 @@ TestResult_t Cnn::test(DatasetImage& images,
             }
         }
         std::vector<double> v = m_outputs[nlayers - 2].vectorize();
-        int o = std::max_element(v.begin(), v.end()) - v.begin();
-        std::cout << "OUT||\tout: " << std::to_string(labels(o)) << "\tloss: " << loss << std::endl;
-        t.log(labels(imgIndex), labels(o), loss);
+        outp = std::max_element(v.begin(), v.end()) - v.begin();
+        t.log(inp, outp, loss);
+        if (show) {
+            std::cout << "\t" << outp << "\t" << (inp == outp) << "\t" << loss << std::endl;
+        }
     }
     return t;
 }

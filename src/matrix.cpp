@@ -350,5 +350,12 @@ void Matrix::zero() {
     }
 }
 
+void Matrix::normalize(const double& mu, const double& sigma2) {
+    for (int k = 0; k < m_size.nPixels(); ++k) {
+        m_matrix[k] = (m_matrix[k] - mu) / sigma2;
+        assert(!std::isnan(m_matrix[k]));
+    }
+}
+
 } /* base */
 } /* capstone */

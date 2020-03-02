@@ -54,12 +54,12 @@ public:
         std::string x = "\n" + y + "input: " + m_cachedInput.show();
         x += "\n" + y + "output: " + m_cachedOutput.show();
         x += "\n" + y + "gradient: " + m_gradient.show() + "\n";
-//        x += "\n" + showExtra(const std::string& y) + "\n";
+        x += showExtra() + "\n";
         return x;
     }
-//    virtual std::string showExtra(const std::string& y) {
-//        return "";
-//    }
+    virtual std::string showExtra() {
+        return "";
+    }
     virtual std::string show() = 0;
 protected:
     LayerAttr_t m_attr;
@@ -78,6 +78,13 @@ public:
     void update(const double& diffLearningRate) final;
     void reset() final;
     std::string show() final;
+    std::string showExtra() final {
+        std::string x = "\nweights:\n";
+        for (int i = 0; i < m_attr.outputSize.getNLayers(); ++i) {
+            x += m_weights[i].show();
+        }
+        return x;
+    }
 private:
     std::vector<Matrix3d> m_weights;
     std::vector<Matrix3d> m_weightsCumul;
@@ -121,8 +128,18 @@ private:
     Matrix3d m_gradientCumul;
     Matrix3d m_biases;
     Matrix3d m_biasesCumul;
+    double m_gain;
     std::vector<Matrix3d> m_weights;
     std::vector<Matrix3d> m_weightsCumul;
+    std::string showExtra() final {
+        std::string x = "\nweights:\n";
+        for (int i = 0; i < m_attr.outputSize.getNLayers(); ++i) {
+            x += m_weights[i].show();
+        }
+        x += "\nbiases:\n" + m_biases.show();
+        x += "\ngain: " + std::to_string(m_gain);
+        return x;
+    }
 };
 
 class LayerSmax final : public Layer {

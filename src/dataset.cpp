@@ -6,14 +6,19 @@
  */
 
 #include "dataset.hpp"
+#include <iostream>
 #include <unistd.h>
-#include <cassert>
 #include <fstream>
 #include <thread>
 #include <cmath>
+#include <random>
+#include <algorithm>
 
 namespace capstone {
 namespace base {
+
+static std::random_device g_device;
+static std::mt19937 g_generator(g_device());
 
 Dataset::Dataset(const std::string& filename,
                  const DATATYPE& dataType,
@@ -24,7 +29,10 @@ Dataset::Dataset(const std::string& filename,
           m_nImages(nImages),
           m_nImagesTotal(0),
           m_dataType(dataType),
-          m_dataTypeStr((dataType == DATATYPE::TEST)? "test": "train") {
+          m_dataTypeStr((dataType == DATATYPE::TEST)? "test": "train"),
+          m_mu(0),
+          m_sigma2(0) {
+    assert(nImages <= NIMAGESMAX);
 }
 
 void Dataset::wait() {
@@ -38,6 +46,8 @@ std::string Dataset::show() {
     x += "\tmagic number: " + std::to_string(m_magicNumber)+ "\n";
     x += "\timages: " + std::to_string(m_nImages)+ "\n";
     x += "\timagesTotal: " + std::to_string(m_nImagesTotal)+ "\n";
+    x += "\tmean: " + std::to_string(m_mu)+ "\n";
+    x += "\tstd. dev.: " + std::to_string(m_sigma2)+ "\n";
     x += "}";
     return x;
 }
@@ -64,6 +74,7 @@ void DatasetImage::init() {
     int count = 0;
     int pixelCount = 0;
     int nImageCount = 0;
+    std::vector<double> rawData{};
     while (input.get(c)) {
         uint8_t k = static_cast<uint8_t>(c);
         if ((count >= 0) && (count < 4)) {
@@ -82,11 +93,9 @@ void DatasetImage::init() {
             assert(nrows == ncols); // square matrices only.
             assert((nrows % 2) == 0); // even number of rows and cols
             data.push_back(static_cast<double>(k) / SCALE);
+            rawData.push_back(static_cast<double>(k) / SCALE);
             pixelCount++;
             if (pixelCount == (nrows * ncols)) {
-//                if (DATATYPE::TRAIN == m_dataType) {
-                normalize(data);
-//                }
                 ImageSize_t imgSize(INPUTSIZE);
                 if (nrows < INPUTSIZE) {
                     uint32_t p = (INPUTSIZE - nrows) / 2;
@@ -105,6 +114,20 @@ void DatasetImage::init() {
         count++;
     }
     input.close();
+    int n = rawData.size();
+    m_mu = 0;
+    m_sigma2 = 0;
+    for (double d : rawData) {
+        m_mu += d;
+    }
+    m_mu /= n;
+    for (double d : rawData) {
+        m_sigma2 += ((d - m_mu) * (d - m_mu)) / n;
+    }
+    m_sigma2 = sqrt(m_sigma2);
+    for (int i = 0; i < m_data.size(); ++i) {
+        m_data[i].normalize(m_mu, m_sigma2);
+    }
     assert(m_nImages == m_data.size());
     m_synch.set();
 }
@@ -135,20 +158,6 @@ void DatasetImage::pad(const uint32_t& nrows,
         }
     }
     data = std::move(tdata);
-}
-
-void DatasetImage::normalize(std::vector<double>& data) {
-    double norm = 0;
-    for (double d : data) {
-        norm += d * d;
-    }
-    norm = sqrt(norm);
-    if (norm == 0) {
-        return;
-    }
-    for (int i = 0; i < data.size(); ++i) {
-        data[i] /= norm;
-    }
 }
 
 DatasetLabel::DatasetLabel(const std::string& filename,
@@ -194,6 +203,45 @@ void DatasetLabel::init() {
 std::string DatasetLabel::showIndex(const int& index) {
     assert(index < m_nImages);
     return std::to_string(m_data[index]);
+}
+
+DatapointSet::DatapointSet(const DatasetImage& images,
+                           const DatasetLabel& labels)
+        : m_shuffledIndices({ }),
+          m_trainSet({ }),
+          m_validSet({ }) {
+    assert(images.getNImages() == labels.getNImages());
+    assert(images.getDataType() == labels.getDataType());
+    DATATYPE dType = labels.getDataType();
+    uint32_t nImages = labels.getNImages();
+    uint32_t nTrain = 0;
+    uint32_t nValid = nImages;
+    if (DATATYPE::TRAIN == dType) {
+        assert((SPLIT >= 0) && (SPLIT <= 1.0));
+        nTrain = nImages * SPLIT;
+        nValid -= nTrain;
+    }
+    int count = 0;
+    for (int i = 0; i < nTrain; ++i) {
+        m_trainSet.push_back(std::make_pair(labels(count), images(count)));
+        count++;
+    }
+    for (int i = 0; i < nValid; ++i) {
+        m_validSet.push_back(std::make_pair(labels(count), images(count)));
+        count++;
+    }
+    shuffle();
+}
+
+void DatapointSet::shuffle() {
+    if (m_trainSet.empty()) {
+        return;
+    }
+    m_shuffledIndices.clear();
+    for (int i = 0; i < m_trainSet.size(); ++i) {
+        m_shuffledIndices.push_back(i);
+    }
+    std::shuffle(m_shuffledIndices.begin(), m_shuffledIndices.end(), g_generator);
 }
 
 } /* base */

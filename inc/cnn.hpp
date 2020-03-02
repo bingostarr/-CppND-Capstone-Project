@@ -25,11 +25,9 @@ public:
         return inst;
     }
     ~Cnn() = default;
-    void train(DatasetImage& images,
-               DatasetLabel& labels);
-    TestResult_t test(DatasetImage& images,
-                      DatasetLabel& labels,
-                      const int& nImages);
+    void train(DatapointSet& data);
+    TestResult_t test(const std::vector<Datapoint_t>& data,
+                      const bool& show = true);
     std::string show();
     std::string showAll();
 private:

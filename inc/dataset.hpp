@@ -8,6 +8,7 @@
 #ifndef INC_DATASET_HPP_
 #define INC_DATASET_HPP_
 
+#include <cassert>
 #include <vector>
 #include "defines.hpp"
 #include "matrix.hpp"
@@ -48,6 +49,8 @@ protected:
     uint32_t m_nImagesTotal;
     DATATYPE m_dataType;
     std::string m_dataTypeStr;
+    double m_mu;
+    double m_sigma2;
 };
 
 class DatasetImage final : public Dataset {
@@ -69,7 +72,6 @@ private:
     void pad(const uint32_t& nrows,
              const uint32_t& p,
              std::vector<double>& data);
-    void normalize(std::vector<double>& data);
 };
 
 class DatasetLabel final : public Dataset {
@@ -88,6 +90,45 @@ public:
 
 private:
     std::vector<unsigned char> m_data;
+};
+
+typedef std::pair<unsigned char, Matrix> Datapoint_t;
+
+class DatapointSet {
+public:
+    DatapointSet(const DatasetImage& images,
+                 const DatasetLabel& labels);
+    ~DatapointSet() = default;
+    void shuffle();
+    inline Datapoint_t& nextTrainData() {
+        assert(!m_shuffledIndices.empty());
+        int index = m_shuffledIndices.back();
+        m_shuffledIndices.pop_back();
+        assert(index < m_trainSet.size());
+        return m_trainSet[index];
+    }
+    inline Datapoint_t& validData(const int& index) {
+        assert(index < m_validSet.size());
+        return m_validSet[index];
+    }
+    inline const std::vector<Datapoint_t>& getTrainData() const {
+        return m_trainSet;
+    }
+    inline const std::vector<Datapoint_t>& getValidData() const {
+        return m_validSet;
+    }
+    inline const uint32_t getTrainSize() const {
+        return m_trainSet.size();
+    }
+    inline const uint32_t getValidSize() const {
+        return m_validSet.size();
+    }
+
+private:
+    std::vector<int> m_shuffledIndices;
+    std::vector<Datapoint_t> m_trainSet;
+    std::vector<Datapoint_t> m_validSet;
+
 };
 
 } /* base */
