@@ -4,7 +4,7 @@
 This repo contains code for Capstone Project compiled as part of the [Udacity C++ Nanodegree Program](https://www.udacity.com/course/c-plus-plus-nanodegree--nd213).
 
 #### Goal
-In this project, a Convolutional Neural Network (CNN) has been designed and built from scratch in C++, that attempts to learn and classify the [MNIST Handwritten Digit Database](http://yann.lecun.com/exdb/mnist/). The database contains various bitmaps of the handwritten versions of the digits: *'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'*.
+In this project, a Convolutional Neural Network (CNN) has been designed and built from scratch in C++, that attempts to learn and classify the [MNIST Handwritten Digit Database](http://yann.lecun.com/exdb/mnist/). The database contains various bitmaps of the handwritten versions of the 10 digits/labels: *'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'*.
 
 The actual architecture of the Neural Network is based on the ["LeNet-5" publication](http://yann.lecun.com/exdb/publis/pdf/lecun-01a.pdf). More information can be found [here](http://yann.lecun.com/exdb/lenet/) and [here](https://engmrk.com/lenet-5-a-classic-cnn-architecture/). 
 
@@ -19,7 +19,7 @@ The efficacy of the CNN model is determined by the following key performance ind
 #### Code Directory Structure
 * */inc* - C++ header files (**.hpp*)
 * */src* - C++ source files (**.cpp*)
-* */data* - training and test data and output files (**-ubyte*)
+* */data* - training and test data files (**-ubyte*)
 
 ## Dependencies for Running Locally
 * cmake >= 3.11
@@ -100,4 +100,74 @@ install v3.0 or greater.
 | A mutex or lock is used in the project.      | DONE (/inc/defines.cpp) |
 | A condition variable is used in the project. | DONE (/inc/defines.cpp) |
 
+## CNN Architecture
+
+The system is modeled after LeNet-5 architecture proposed [here](http://yann.lecun.com/exdb/publis/pdf/lecun-01a.pdf). Input is a single channel 1x28x28 image, while output is a one-hot vector of possible set of labels (10x1x1).
+
+| Index | Layer                                                        | Input   | Output  |
+| ----- | ------------------------------------------------------------ | ------- | ------- |
+| 0     | First Convolution Layer (6 features - 5x5 kernel - 1 stride) | 1x28x28 | 6x24x24 |
+| 1     | First RELU Layer                                             | 6x24x24 | 6x24x24 |
+| 2     | First Max Pooling Layer (6 features - 2x2 pool - 2 stride)   | 6x24x24 | 6x12x12 |
+| 3     | Second Convolution Layer (16 features - 5x5 kernel - 1 stride) | 6x12x12 | 16x8x8  |
+| 4     | Second RELU Layer                                            | 16x8x8  | 16x8x8  |
+| 5     | Second Max Pooling Layer (16 features - 2x2 pool - 2 stride) | 16x8x8  | 16x4x4  |
+| 6     | Dense Fully Connected Layer                                  | 16x4x4  | 10x1x1  |
+| 7     | Softmax Activation Layer                                     | 10x1x1  | 10x1x1  |
+| 8     | Cross-entropy Loss Layer                                     | 10x1x1  | 10x1x1  |
+
+##### Hyper-parameters:
+
+| Parameter                                  | Type/Value                    | Comment(s)                                                   |
+| ------------------------------------------ | ----------------------------- | ------------------------------------------------------------ |
+| Training Data Size (incl. Validation Data) | 5000                          | 60000 maximum possible.                                      |
+| Testing Data Size                          | 5000                          | 10000 maximum possible.                                      |
+| Epochs                                     | 5                             |                                                              |
+| Batch Size                                 | 10                            |                                                              |
+| Image Pixel Scale                          | 255.0                         |                                                              |
+| Learning Rate                              | 0.001                         | 0.05 was causing the CNN to diverge.                         |
+| FC Layer Gain                              | 1000                          | Output scaled down to avoid issues in Softmax layer.         |
+| Train vs Validation Split                  | 0.9                           | = 4500 training data + 500 validation data.                  |
+| Normalization                              | Overall                       | All of training data set was used to compute *mu* and *sigma*. |
+| Weights/filters initialization             | Truncated Normal Distribution |                                                              |
+| Bias initialization                        | Zeros                         |                                                              |
+| Weights and bias update                    | After every batch             |                                                              |
+| Randomize training data                    | Shuffle every epoch           |                                                              |
+
 ## CNN Training, Validation and Test Results
+
+The following are the partial results of a single run of the CNN with the above parameters.
+
+| epoch | train. loss | train. accuracy | valid. loss | valid. accuracy |
+| :-------: | :---------------: | :----------: | :------: | :----------: |
+|     0     |       0.30        |     0.91     |   0.35   |     0.90     |
+|     1     |       0.19        |     0.95     |   0.24   |     0.93     |
+|     2     |       0.14        |     0.96     |   0.20   |     0.95     |
+|     3     |       0.11        |     0.97     |   0.18   |     0.94     |
+|     4     |       0.15        |     0.95     |   0.25   |     0.93     |
+|     5     |       0.07        |     0.98     |   0.15   |     0.96     |
+
+![image-20200303003932503](data/figure1.png)
+
+The following table captures how accurately the CNN classifies a given label during training (the incidence probability of the label in the training data is also captured):
+
+| label | incidence | accuracy |
+| :---: | :-------: | :------: |
+|   0   |   0.10    |   0.95   |
+|   1   |   0.11    |   0.96   |
+|   2   |   0.10    |   0.90   |
+|   3   |   0.10    |   0.92   |
+|   4   |   0.11    |   0.93   |
+|   5   |   0.09    |   0.91   |
+|   6   |   0.10    |   0.94   |
+|   7   |   0.11    |   0.91   |
+|   8   |   0.09    |   0.88   |
+|   9   |   0.10    |   0.88   |
+
+![image-20200303003343321](data/figure2.png)
+
+The following graph captures how loss and accuracy settle over the course of the training.
+
+![image-20200303003459496](data/figure3.png)
+
+The test results will be put up shortly.
