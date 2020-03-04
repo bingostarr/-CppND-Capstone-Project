@@ -138,36 +138,40 @@ The system is modeled after LeNet-5 architecture proposed [here](http://yann.lec
 
 The following are the partial results of a single run of the CNN with the above parameters.
 
-| epoch | train. loss | train. accuracy | valid. loss | valid. accuracy |
-| :-------: | :---------------: | :----------: | :------: | :----------: |
-|     0     |       0.30        |     0.91     |   0.35   |     0.90     |
-|     1     |       0.19        |     0.95     |   0.24   |     0.93     |
-|     2     |       0.14        |     0.96     |   0.20   |     0.95     |
-|     3     |       0.11        |     0.97     |   0.18   |     0.94     |
-|     4     |       0.15        |     0.95     |   0.25   |     0.93     |
-|     5     |       0.07        |     0.98     |   0.15   |     0.96     |
+| epoch | train. loss | train. accuracy | valid. loss | valid. accuracy | test loss | test accuracy |
+| :-------: | :---------------: | :----------: | :----------: | :----------: | :----------: | :----------: |
+|     0     |       0.30        |     0.91     |   0.35   |     0.90     |     0.16     |     0.95     |
+|     1     |       0.19        |     0.95     |   0.24   |     0.93     |     0.16     |     0.95     |
+|     2     |       0.14        |     0.96     |   0.20   |     0.95     |     0.16     |     0.95     |
+|     3     |       0.11        |     0.97     |   0.18   |     0.94     |     0.16     |     0.95     |
+|     4     |       0.15        |     0.95     |   0.25   |     0.93     |     0.16     |     0.95     |
+|     5     |       0.07        |     0.98     |   0.15   |     0.96     |     0.16     |     0.95     |
+| 6 | 0.06 | 0.99 | 0.13 | 0.96 | 0.16 | 0.95 |
+| 7 | 0.05 | 0.99 | 0.14 | 0.95 | 0.16 | 0.95 |
+| 8 | 0.05 | 0.99 | 0.14 | 0.96 | 0.16 | 0.95 |
+| 9 | 0.04 | 0.99 | 0.13 | 0.96 | 0.16 | 0.95 |
 
-![image-20200303003932503](data/figure1.png)
+![](data/figure1.png)
+
+![](data/figure2.png)
 
 The following table captures how accurately the CNN classifies a given label during training (the incidence probability of the label in the training data is also captured):
 
-| label | incidence | accuracy |
-| :---: | :-------: | :------: |
-|   0   |   0.10    |   0.95   |
-|   1   |   0.11    |   0.96   |
-|   2   |   0.10    |   0.90   |
-|   3   |   0.10    |   0.92   |
-|   4   |   0.11    |   0.93   |
-|   5   |   0.09    |   0.91   |
-|   6   |   0.10    |   0.94   |
-|   7   |   0.11    |   0.91   |
-|   8   |   0.09    |   0.88   |
-|   9   |   0.10    |   0.88   |
-
-![image-20200303003343321](data/figure2.png)
-
-The following graph captures how loss and accuracy settle over the course of the training.
+| label | incidence | train accuracy | test accuracy |
+| :---: | :-------: | :------------: | :-----------: |
+|   0   |   0.10    |      0.97      |     0.99      |
+|   1   |   0.11    |      0.97      |     0.98      |
+|   2   |   0.10    |      0.93      |     0.95      |
+|   3   |   0.10    |      0.94      |     0.94      |
+|   4   |   0.11    |      0.95      |     0.92      |
+|   5   |   0.09    |      0.94      |     0.95      |
+|   6   |   0.10    |      0.96      |     0.95      |
+|   7   |   0.11    |      0.94      |     0.95      |
+|   8   |   0.09    |      0.92      |     0.90      |
+|   9   |   0.10    |      0.91      |     0.95      |
 
 ![image-20200303003459496](data/figure3.png)
 
-The test results will be put up shortly.
+The following graph captures how loss and accuracy settle over the course of the training.
+
+![](data/figure4.png)
